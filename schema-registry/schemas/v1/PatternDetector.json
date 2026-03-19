@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operator_class": "PatternDetector",
+  "fields": [
+    {"name": "pattern_state",     "type": "map[str, list[tuple[int64, float64]]]", "nullable": false, "description": "Zone ID → time-series of aggregated flow readings for CEP pattern matching"},
+    {"name": "active_matches",    "type": "list[map[str, int64]]", "nullable": false, "description": "Partially matched pattern sequences with their start timestamps"},
+    {"name": "watermark_ms",      "type": "int64",               "nullable": false, "description": "Current event-time watermark"},
+    {"name": "pending_timers",    "type": "list[int64]",         "nullable": false, "description": "Pattern timeout fire timestamps"},
+    {"name": "kafka_offset_map",  "type": "map[int32, int64]",   "nullable": false, "description": "Per-partition Kafka consumer offsets"}
+  ]
+}

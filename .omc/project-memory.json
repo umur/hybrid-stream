@@ -1,0 +1,245 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1773945616996,
+  "projectRoot": "/Users/umurinan/Documents/papers/A Hybrid Edge-Cloud Stream Processing Framework for Low-Latency Real-Time Analytics/code",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {},
+  "hotPaths": [
+    {
+      "path": "hybridstream-common/hybridstream/common/snapshot.py",
+      "accessCount": 3,
+      "lastAccessed": 1773946846537,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_dag_model.py",
+      "accessCount": 3,
+      "lastAccessed": 1773946867575,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_snapshot.py",
+      "accessCount": 3,
+      "lastAccessed": 1773946894610,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/hybridstream/common/object_store.py",
+      "accessCount": 2,
+      "lastAccessed": 1773946833044,
+      "type": "file"
+    },
+    {
+      "path": "PHASE_1.md",
+      "accessCount": 1,
+      "lastAccessed": 1773945626465,
+      "type": "file"
+    },
+    {
+      "path": "PLAN.md",
+      "accessCount": 1,
+      "lastAccessed": 1773945626557,
+      "type": "file"
+    },
+    {
+      "path": "proto/hybridstream.proto",
+      "accessCount": 1,
+      "lastAccessed": 1773945660526,
+      "type": "file"
+    },
+    {
+      "path": "scripts/generate_proto.sh",
+      "accessCount": 1,
+      "lastAccessed": 1773945666658,
+      "type": "file"
+    },
+    {
+      "path": "infra/docker-compose.yml",
+      "accessCount": 1,
+      "lastAccessed": 1773945679984,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/NormalizerOperator.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945687717,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/FeatureAggWindow.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945691647,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/MultiStreamJoin.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945695739,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/BinaryClassifier.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945698874,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/VehicleDetector.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945701007,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/ZoneAggregator.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945704710,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/PatternDetector.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945708120,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/RiskCheck.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945711441,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/AnomalyDetector.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945714330,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/StatAggregator.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945717503,
+      "type": "file"
+    },
+    {
+      "path": "schema-registry/schemas/v1/ComplianceLogger.json",
+      "accessCount": 1,
+      "lastAccessed": 1773945720321,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/hybridstream/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945725540,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/hybridstream/common/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945726598,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/hybridstream/common/proto/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945727263,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/pyproject.toml",
+      "accessCount": 1,
+      "lastAccessed": 1773945730015,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/hybridstream/common/dag_model.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945741314,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/hybridstream/common/schema_registry.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945748997,
+      "type": "file"
+    },
+    {
+      "path": "hea/hea/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945775853,
+      "type": "file"
+    },
+    {
+      "path": "hea/hea/execution/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945776711,
+      "type": "file"
+    },
+    {
+      "path": "hea/hea/state/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945777167,
+      "type": "file"
+    },
+    {
+      "path": "hea/hea/kafka/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945778118,
+      "type": "file"
+    },
+    {
+      "path": "hea/hea/grpc/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945778540,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945779409,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/grpc/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1773945779867,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_schema_registry.py",
+      "accessCount": 1,
+      "lastAccessed": 1773946906031,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_object_store.py",
+      "accessCount": 1,
+      "lastAccessed": 1773946923922,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

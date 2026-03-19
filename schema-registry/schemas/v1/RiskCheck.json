@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "operator_class": "RiskCheck",
+  "fields": [
+    {"name": "rule_id",           "type": "str",                 "nullable": false, "description": "Risk rule identifier this instance enforces"},
+    {"name": "position_cache",    "type": "map[str, float64]",   "nullable": false, "description": "Instrument ID → current position size (updated per tick)"},
+    {"name": "watermark_ms",      "type": "int64",               "nullable": false, "description": "Current event-time watermark"},
+    {"name": "kafka_offset_map",  "type": "map[int32, int64]",   "nullable": false, "description": "Per-partition Kafka consumer offsets"}
+  ]
+}

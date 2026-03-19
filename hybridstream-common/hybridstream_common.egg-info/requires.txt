@@ -1,0 +1,7 @@
+msgpack>=1.0
+aioboto3>=13.0
+pydantic>=2.0
+
+[dev]
+pytest>=8.0
+pytest-asyncio>=0.23

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operator_class": "FeatureAggWindow",
+  "fields": [
+    {"name": "window_buffers",    "type": "list[tuple[str, int64, list[float64]]]", "nullable": false, "description": "[(key, window_start_ms, values)] per active window"},
+    {"name": "accumulators",      "type": "map[str, float64]",   "nullable": false, "description": "Running aggregation accumulators per window key"},
+    {"name": "watermark_ms",      "type": "int64",               "nullable": false, "description": "Current event-time watermark"},
+    {"name": "pending_timers",    "type": "list[int64]",         "nullable": false, "description": "Fire timestamps for registered event-time timers"},
+    {"name": "kafka_offset_map",  "type": "map[int32, int64]",   "nullable": false, "description": "Kafka partition → last consumed offset"}
+  ]
+}

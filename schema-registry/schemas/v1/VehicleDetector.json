@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "operator_class": "VehicleDetector",
+  "fields": [
+    {"name": "detection_state",   "type": "map[str, int32]",     "nullable": false, "description": "Intersection ID → current vehicle count"},
+    {"name": "watermark_ms",      "type": "int64",               "nullable": false, "description": "Current event-time watermark"},
+    {"name": "kafka_offset_map",  "type": "map[int32, int64]",   "nullable": false, "description": "Per-partition Kafka consumer offsets"}
+  ]
+}

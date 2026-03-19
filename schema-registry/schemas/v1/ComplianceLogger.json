@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "operator_class": "ComplianceLogger",
+  "fields": [
+    {"name": "pending_records",   "type": "list[bytes]",         "nullable": false, "description": "Buffered compliance log entries awaiting flush to output sink"},
+    {"name": "sequence_counter",  "type": "int64",               "nullable": false, "description": "Monotonically increasing compliance log entry sequence number"},
+    {"name": "watermark_ms",      "type": "int64",               "nullable": false, "description": "Current event-time watermark"},
+    {"name": "kafka_offset_map",  "type": "map[int32, int64]",   "nullable": false, "description": "Per-partition Kafka consumer offsets"}
+  ]
+}
