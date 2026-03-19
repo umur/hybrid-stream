@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+.omc/
+firebase-debug.log
