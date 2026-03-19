@@ -31,6 +31,30 @@
   "directoryMap": {},
   "hotPaths": [
     {
+      "path": "hybridstream-common/hybridstream/common/snapshot.py",
+      "accessCount": 3,
+      "lastAccessed": 1773946846537,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_dag_model.py",
+      "accessCount": 3,
+      "lastAccessed": 1773946867575,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_snapshot.py",
+      "accessCount": 3,
+      "lastAccessed": 1773946894610,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/hybridstream/common/object_store.py",
+      "accessCount": 2,
+      "lastAccessed": 1773946833044,
+      "type": "file"
+    },
+    {
       "path": "PHASE_1.md",
       "accessCount": 1,
       "lastAccessed": 1773945626465,
@@ -163,30 +187,6 @@
       "type": "file"
     },
     {
-      "path": "hybridstream-common/hybridstream/common/snapshot.py",
-      "accessCount": 1,
-      "lastAccessed": 1773945754369,
-      "type": "file"
-    },
-    {
-      "path": "hybridstream-common/hybridstream/common/object_store.py",
-      "accessCount": 1,
-      "lastAccessed": 1773945759426,
-      "type": "file"
-    },
-    {
-      "path": "hybridstream-common/tests/test_dag_model.py",
-      "accessCount": 1,
-      "lastAccessed": 1773945770139,
-      "type": "file"
-    },
-    {
-      "path": "hybridstream-common/tests/test_snapshot.py",
-      "accessCount": 1,
-      "lastAccessed": 1773945775211,
-      "type": "file"
-    },
-    {
       "path": "hea/hea/__init__.py",
       "accessCount": 1,
       "lastAccessed": 1773945775853,
@@ -226,6 +226,18 @@
       "path": "aode/aode/grpc/__init__.py",
       "accessCount": 1,
       "lastAccessed": 1773945779867,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_schema_registry.py",
+      "accessCount": 1,
+      "lastAccessed": 1773946906031,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_object_store.py",
+      "accessCount": 1,
+      "lastAccessed": 1773946923922,
       "type": "file"
     }
   ],
