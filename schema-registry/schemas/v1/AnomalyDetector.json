@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "operator_class": "AnomalyDetector",
+  "fields": [
+    {"name": "baseline_stats",    "type": "map[str, tuple[float64, float64]]", "nullable": false, "description": "Instrument → (rolling_mean, rolling_std) for Z-score anomaly detection"},
+    {"name": "alert_cooldown",    "type": "map[str, int64]",     "nullable": false, "description": "Instrument → last alert timestamp (ms) for cooldown enforcement"},
+    {"name": "watermark_ms",      "type": "int64",               "nullable": false, "description": "Current event-time watermark"},
+    {"name": "kafka_offset_map",  "type": "map[int32, int64]",   "nullable": false, "description": "Per-partition Kafka consumer offsets"}
+  ]
+}

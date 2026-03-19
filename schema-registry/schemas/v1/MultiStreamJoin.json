@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "operator_class": "MultiStreamJoin",
+  "fields": [
+    {"name": "left_buffer",       "type": "list[tuple[str, int64, bytes]]", "nullable": false, "description": "Buffered records from left stream: (key, event_time_ms, payload)"},
+    {"name": "right_buffer",      "type": "list[tuple[str, int64, bytes]]", "nullable": false, "description": "Buffered records from right stream"},
+    {"name": "window_size_ms",    "type": "int64",               "nullable": false, "description": "Join window width in milliseconds"},
+    {"name": "watermark_ms",      "type": "int64",               "nullable": false, "description": "Current event-time watermark"},
+    {"name": "kafka_offset_map",  "type": "map[int32, int64]",   "nullable": false, "description": "Per-partition Kafka consumer offsets"},
+    {"name": "pending_timers",    "type": "list[int64]",         "nullable": false, "description": "Window expiry timers"}
+  ]
+}

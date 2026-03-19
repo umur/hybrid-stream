@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "operator_class": "NormalizerOperator",
+  "fields": [
+    {"name": "kafka_offset_map", "type": "map[int32, int64]",    "nullable": false, "description": "Kafka partition → last consumed offset"},
+    {"name": "watermark_ms",     "type": "int64",                "nullable": false, "description": "Current event-time watermark in ms"},
+    {"name": "scale_factors",    "type": "map[str, float64]",    "nullable": false, "description": "Per-signal normalization scale factors (calibrated at startup)"}
+  ]
+}

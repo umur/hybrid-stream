@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"source \\\"/Users/umurinan/Documents/papers/A Hybrid Edge-Cloud Stream Processing Framework for Low-Latency Real-Time Analytics/code/.venv/bin/activate\\\" && cd \\\"/Users/umurinan/Documents/pa...",
+  "error": "Exit code 1\n============================= test session starts ==============================\nplatform darwin -- Python 3.14.3, pytest-9.0.2, pluggy-1.6.0 -- /Users/umurinan/Documents/papers/A Hybrid Edge-Cloud Stream Processing Framework for Low-Latency Real-Time Analytics/code/.venv/bin/python3.14\ncachedir: .pytest_cache\nrootdir: /Users/umurinan/Documents/papers/A Hybrid Edge-Cloud Stream Processing Framework for Low-Latency Real-Time Analytics/code/hybridstream-common\nconfigfile: pyproject.tom...",
+  "timestamp": "2026-03-19T18:43:43.291Z",
+  "retry_count": 1
+}

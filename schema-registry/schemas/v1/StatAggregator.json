@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operator_class": "StatAggregator",
+  "fields": [
+    {"name": "accumulators",      "type": "map[str, list[float64]]", "nullable": false, "description": "Metric name → rolling sample buffer for statistical computation"},
+    {"name": "window_buffers",    "type": "list[tuple[str, int64, float64]]", "nullable": false, "description": "[(metric_key, event_time_ms, value)] in current window"},
+    {"name": "watermark_ms",      "type": "int64",               "nullable": false, "description": "Current event-time watermark"},
+    {"name": "pending_timers",    "type": "list[int64]",         "nullable": false, "description": "Window flush fire timestamps"},
+    {"name": "kafka_offset_map",  "type": "map[int32, int64]",   "nullable": false, "description": "Per-partition Kafka consumer offsets"}
+  ]
+}

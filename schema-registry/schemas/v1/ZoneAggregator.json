@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "operator_class": "ZoneAggregator",
+  "fields": [
+    {"name": "zone_id",           "type": "str",                 "nullable": false, "description": "Zone identifier this instance aggregates"},
+    {"name": "flow_counters",     "type": "map[str, int64]",     "nullable": false, "description": "Per-intersection vehicle flow counters"},
+    {"name": "window_buffers",    "type": "list[tuple[int64, int64]]", "nullable": false, "description": "(event_time_ms, count) tuples in current aggregation window"},
+    {"name": "watermark_ms",      "type": "int64",               "nullable": false, "description": "Current event-time watermark"},
+    {"name": "kafka_offset_map",  "type": "map[int32, int64]",   "nullable": false, "description": "Per-partition Kafka consumer offsets"}
+  ]
+}
