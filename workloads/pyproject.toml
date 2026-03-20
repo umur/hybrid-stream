@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "hybridstream-workloads"
+version = "0.1.0"
+description = "HybridStream synthetic evaluation workloads (W1, W2, W3)"
+packages = [
+    {include = "w1"},
+    {include = "w2"},
+    {include = "w3"},
+    {include = "generators"},
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+aiokafka  = "^0.10"
+numpy     = "^1.26"
+scipy     = "^1.12"
+msgpack   = "^1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest           = "^8.0"
+pytest-asyncio   = "^0.23"
