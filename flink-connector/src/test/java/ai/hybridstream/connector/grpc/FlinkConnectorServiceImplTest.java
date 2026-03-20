@@ -2,7 +2,6 @@ package ai.hybridstream.connector.grpc;
 
 import ai.hybridstream.connector.config.ConnectorConfig;
 import ai.hybridstream.connector.snapshot.SchemaRegistry;
-import ai.hybridstream.connector.snapshot.SnapshotDeserializer;
 import ai.hybridstream.connector.store.MinIOClient;
 import ai.hybridstream.proto.RestoreRequest;
 import ai.hybridstream.proto.RestoreResponse;
@@ -10,13 +9,17 @@ import ai.hybridstream.proto.TerminateRequest;
 import ai.hybridstream.proto.TerminateAck;
 import ai.hybridstream.proto.JobStatusRequest;
 import ai.hybridstream.proto.JobStatusResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
 
+import java.nio.file.*;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -25,17 +28,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class FlinkConnectorServiceImplTest {
 
-    @Mock
-    private ConnectorConfig config;
+    @TempDir
+    Path schemaDir;
 
     @Mock
     private MinIOClient minioClient;
-
-    @Mock
-    private SchemaRegistry schemaRegistry;
-
-    @Mock
-    private SnapshotDeserializer deserializer;
 
     @Mock
     private StreamObserver<RestoreResponse> restoreResponseObserver;
@@ -47,25 +44,49 @@ class FlinkConnectorServiceImplTest {
     private StreamObserver<JobStatusResponse> statusResponseObserver;
 
     private FlinkConnectorServiceImpl service;
+    private ConnectorConfig config;
+    private SchemaRegistry schemaRegistry;
+
+    /** Builds a valid HSMP-encoded MessagePack snapshot for VehicleDetector. */
+    private byte[] buildValidSnapshot() throws Exception {
+        var mapper = new ObjectMapper(new MessagePackFactory());
+        byte[] payload = mapper.writeValueAsBytes(Map.of(
+            "detection_count", 5,
+            "last_speed", 88.0,
+            "is_active", true
+        ));
+        byte[] snapshot = new byte[6 + payload.length];
+        snapshot[0] = 0x48; snapshot[1] = 0x53; snapshot[2] = 0x4D; snapshot[3] = 0x50; // HSMP
+        snapshot[4] = 0x00; snapshot[5] = 0x01; // version 1
+        System.arraycopy(payload, 0, snapshot, 6, payload.length);
+        return snapshot;
+    }
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        // Write VehicleDetector schema to temp dir
+        String schema = """
+            {"operator_type":"VehicleDetector","schema_version":1,
+             "fields":{"detection_count":"int","last_speed":"float","is_active":"boolean"}}
+            """;
+        Files.writeString(schemaDir.resolve("VehicleDetector.json"), schema);
+
+        config = ConnectorConfig.fromEnv();
+        config.schemaDir = schemaDir.toString();
+
+        schemaRegistry = new SchemaRegistry();
+        schemaRegistry.loadFromDirectory(schemaDir.toString());
+
         service = new FlinkConnectorServiceImpl(config, minioClient, schemaRegistry);
     }
 
     @Test
     void testRestoreOperatorSuccess() throws Exception {
-        // Arrange
-        String operatorId = "test-operator";
+        String operatorId  = "test-operator";
         String snapshotKey = "test-snapshot-key";
         String operatorType = "VehicleDetector";
 
-        byte[] snapshotBytes = "mock-snapshot-data".getBytes();
-        Map<String, Object> rawState = Map.of("field1", "value1");
-        Map<String, Object> flinkState = Map.of("field1", "translated-value1");
-
-        when(minioClient.downloadSnapshot(snapshotKey)).thenReturn(snapshotBytes);
-        when(schemaRegistry.getSchema(operatorType)).thenReturn(Map.of("field1", "string"));
+        when(minioClient.downloadSnapshot(snapshotKey)).thenReturn(buildValidSnapshot());
 
         RestoreRequest request = RestoreRequest.newBuilder()
             .setOperatorId(operatorId)
@@ -73,10 +94,8 @@ class FlinkConnectorServiceImplTest {
             .setOperatorType(operatorType)
             .build();
 
-        // Act
         service.restoreOperator(request, restoreResponseObserver);
 
-        // Assert
         verify(minioClient).downloadSnapshot(snapshotKey);
         verify(restoreResponseObserver).onNext(argThat(response ->
             response.getOperatorId().equals(operatorId) &&
@@ -88,10 +107,9 @@ class FlinkConnectorServiceImplTest {
 
     @Test
     void testRestoreOperatorFailure() throws Exception {
-        // Arrange
-        String operatorId = "test-operator";
+        String operatorId  = "test-operator";
         String snapshotKey = "test-snapshot-key";
-        
+
         when(minioClient.downloadSnapshot(snapshotKey)).thenThrow(new RuntimeException("MinIO error"));
 
         RestoreRequest request = RestoreRequest.newBuilder()
@@ -100,10 +118,8 @@ class FlinkConnectorServiceImplTest {
             .setOperatorType("VehicleDetector")
             .build();
 
-        // Act
         service.restoreOperator(request, restoreResponseObserver);
 
-        // Assert
         verify(restoreResponseObserver).onNext(argThat(response ->
             response.getOperatorId().equals(operatorId) &&
             !response.getSuccess() &&
@@ -113,31 +129,26 @@ class FlinkConnectorServiceImplTest {
     }
 
     @Test
-    void testTerminateOperatorFound() {
-        // Arrange - first restore an operator to create a job
+    @SuppressWarnings("unchecked")
+    void testTerminateOperatorFound() throws Exception {
         String operatorId = "test-operator";
-        try {
-            when(minioClient.downloadSnapshot(anyString())).thenReturn("mock-data".getBytes());
-            when(schemaRegistry.getSchema(anyString())).thenReturn(Map.of());
-            
-            RestoreRequest restoreRequest = RestoreRequest.newBuilder()
-                .setOperatorId(operatorId)
-                .setSnapshotObjectKey("test-key")
-                .setOperatorType("VehicleDetector")
-                .build();
-            service.restoreOperator(restoreRequest, mock(StreamObserver.class));
-        } catch (Exception e) {
-            // Ignore for test setup
-        }
 
+        // Restore first to register a job ID
+        when(minioClient.downloadSnapshot(anyString())).thenReturn(buildValidSnapshot());
+        RestoreRequest restoreRequest = RestoreRequest.newBuilder()
+            .setOperatorId(operatorId)
+            .setSnapshotObjectKey("test-key")
+            .setOperatorType("VehicleDetector")
+            .build();
+        service.restoreOperator(restoreRequest, mock(StreamObserver.class));
+
+        // Now terminate
         TerminateRequest request = TerminateRequest.newBuilder()
             .setOperatorId(operatorId)
             .build();
 
-        // Act
         service.terminateOperator(request, terminateResponseObserver);
 
-        // Assert
         verify(terminateResponseObserver).onNext(argThat(response ->
             response.getOperatorId().equals(operatorId) &&
             response.getSuccess()
