@@ -1,0 +1,33 @@
+\documentclass[12pt]{letter}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+
+\signature{Umur Inan}
+\address{Solarity AI\\United States}
+\date{\today}
+
+\begin{document}
+\begin{letter}{Editor-in-Chief\\Future Generation Computer Systems\\Elsevier}
+
+\opening{Dear Editor,}
+
+We are pleased to submit our manuscript entitled ``\textbf{A Hybrid Edge-Cloud Stream Processing Framework for Low-Latency Real-Time Analytics}'' for consideration as a Research Paper in \textit{Future Generation Computer Systems}.
+
+This paper presents HybridStream, a hybrid edge-cloud stream processing framework that addresses a persistent gap in the literature: the absence of runtime-adaptive, SLO-aware operator placement across edge and cloud tiers for continuous stream processing workloads. Our work directly extends the edge-cloud stream analytics direction established by Wang et al. (2022), published in this journal, by introducing an Adaptive Offloading Decision Engine (AODE) that continuously recalibrates operator placement based on real-time telemetry.
+
+The principal contributions include:
+\begin{enumerate}
+    \item A multi-factor scoring model for dynamic operator placement that integrates latency, resource utilization, SLO urgency, and inter-tier transfer costs;
+    \item A pause-checkpoint-transfer-resume (PCTR) protocol for stateful operator migration with bounded pause times;
+    \item A lightweight Python-based edge runtime achieving 95.3\% memory reduction compared to Apache Flink;
+    \item Comprehensive empirical evaluation across three workloads, three network profiles, and 630 experiment runs demonstrating 99.2--99.8\% SLO compliance.
+\end{enumerate}
+
+We believe this work aligns closely with FGCS's scope in distributed systems, edge computing, and cloud computing. A fully functional prototype and all experimental artifacts are publicly available to enable reproducibility.
+
+This manuscript has not been published elsewhere and is not under consideration by any other journal.
+
+\closing{Sincerely,}
+
+\end{letter}
+\end{document}

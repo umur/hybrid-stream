@@ -1,7 +1,7 @@
 # A Hybrid Edge-Cloud Stream Processing Framework for Low-Latency Real-Time Analytics
 
 **Authors:** Umur Inan
-**Target Journal:** Journal of Big Data (Springer) — Q2
+**Target Journal:** Future Generation Computer Systems (Elsevier) — Q1, IF ~7.5
 **Status:** Final Draft — Ready for Submission
 **Last Updated:** 2026-03-20
 

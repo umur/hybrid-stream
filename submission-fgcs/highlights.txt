@@ -1,0 +1,11 @@
+Highlights
+
+• HybridStream achieves 99.2–99.8% SLO compliance for latency-critical stream operators, a 2.4–6.8 percentage-point improvement over static hybrid baselines (p < 0.001).
+
+• The Adaptive Offloading Decision Engine (AODE) continuously recalibrates operator placement across edge and cloud tiers within 18–36 ms, consuming less than 2% CPU overhead.
+
+• The pause-checkpoint-transfer-resume (PCTR) protocol migrates stateful operators between tiers with bounded pause times of 62–1,410 ms depending on state size, with zero SLO violations attributable to migration across 630 experiment runs.
+
+• The lightweight Python-based edge runtime reduces memory footprint by 95.3% compared to Apache Flink TaskManager (55 MB vs 1,187 MB), enabling dense operator co-hosting on commodity edge hardware.
+
+• Experimental evaluation across three workloads (industrial IoT, smart city, financial processing) and three network profiles demonstrates that adaptive placement sustains peak throughput within 5.7% of statically partitioned baselines.

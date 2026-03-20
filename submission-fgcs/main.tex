@@ -1,0 +1,144 @@
+\documentclass[preprint,12pt,authoryear]{elsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{listings}
+
+\journal{Future Generation Computer Systems}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{A Hybrid Edge-Cloud Stream Processing Framework for Low-Latency Real-Time Analytics}
+
+\author[sol]{Umur Inan\corref{cor1}}
+\ead{umur@solarity.ai}
+\cortext[cor1]{Corresponding author}
+\address[sol]{Solarity AI, United States}
+
+\begin{abstract}
+Real-time stream processing applications increasingly impose sub-10-ms service-level objectives (SLOs) on individual operators while simultaneously requiring the compute scalability of cloud infrastructure for bulk analytics. Neither cloud-only nor static hybrid deployments satisfy both constraints: cloud-only architectures incur irreducible WAN latency that structurally violates millisecond SLOs, while static hybrid systems lack mechanisms to respond to load spikes, memory pressure, or ingest rate variability at runtime. This paper presents HybridStream, a hybrid edge-cloud stream processing framework in which an Adaptive Offloading Decision Engine (AODE) continuously recalibrates operator placement across edge and cloud tiers. The AODE employs a multi-factor scoring model that integrates EWMA-smoothed latency estimates, resource utilization, SLO urgency, and inter-tier transfer costs into a single placement quality measure. Stateful operators are migrated between tiers at runtime via the pause-checkpoint-transfer-resume (PCTR) protocol, which bounds migration pause time to 62--1,410~ms depending on operator state size. The HybridStream Edge Agent (HEA) provides a lightweight Python~3.12 execution environment with a 55.2~MB baseline footprint---a 95.3\% reduction relative to an Apache Flink TaskManager---enabling dense co-hosting on commodity edge hardware. Experimental evaluation across three representative workloads (industrial IoT, smart city, financial processing) and three network profiles (10--150~ms RTT) demonstrates that HybridStream achieves 99.2--99.8\% SLO compliance---a 2.4--6.8 percentage-point improvement over a statically partitioned hybrid baseline ($p < 0.001$, rank-biserial $r = 0.88$--$0.94$)---while sustaining peak throughput within 5.7\% of the static baseline. AODE recalibration overhead remains below 2\% CPU and 145~MB RSS on a 2-vCPU host, with placement decisions issued within 36~ms.
+\end{abstract}
+
+\begin{keyword}
+stream processing \sep edge computing \sep cloud computing \sep operator placement \sep adaptive offloading \sep stateful migration \sep SLO compliance \sep hybrid architecture
+\end{keyword}
+
+\begin{highlights}
+\item HybridStream achieves 99.2--99.8\% SLO compliance for latency-critical stream operators, a 2.4--6.8 percentage-point improvement over static hybrid baselines ($p < 0.001$).
+\item The AODE continuously recalibrates operator placement within 18--36~ms, consuming less than 2\% CPU overhead.
+\item The PCTR protocol migrates stateful operators with bounded pause times of 62--1,410~ms, with zero SLO violations attributable to migration across 630 experiment runs.
+\item The lightweight edge runtime reduces memory footprint by 95.3\% compared to Apache Flink TaskManager (55~MB vs 1,187~MB).
+\item Experimental evaluation across three workloads and three network profiles demonstrates adaptive placement sustains peak throughput within 5.7\% of static baselines.
+\end{highlights}
+
+\end{frontmatter}
+
+%% ============================================================
+%% NOTE TO AUTHOR:
+%% The full manuscript body should be inserted here.
+%% Convert each markdown section (## → \section, ### → \subsection)
+%% and format tables, equations, and algorithm environments.
+%%
+%% This template is configured for FGCS submission with:
+%%   - elsarticle preprint mode (single column, double spaced)
+%%   - Numbered references (elsarticle-num)
+%%   - Author-year citations available via natbib
+%%
+%% The paper.md file contains the complete text to be converted.
+%% ============================================================
+
+\section{Introduction}
+\label{sec:introduction}
+
+% [Insert Section 1 content from paper.md]
+% Convert markdown to LaTeX formatting
+
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Centralized Stream Processing Frameworks}
+\subsection{Edge and Fog Computing}
+\subsection{Hybrid Edge-Cloud Architectures}
+\subsection{Workload Offloading and Task Scheduling}
+\subsection{Positioning HybridStream}
+
+\section{Problem Statement \& Motivation}
+\label{sec:problem}
+
+\subsection{System Model}
+\subsection{Problem Formulation}
+\subsection{Motivating Scenarios}
+\subsection{Design Requirements}
+
+\section{Proposed Architecture}
+\label{sec:architecture}
+
+\subsection{System Overview}
+\subsection{Adaptive Offloading Decision Engine}
+\subsubsection{Telemetry Collector}
+\subsubsection{Operator Scoring Model}
+\subsubsection{Placement Recalibration Algorithm}
+\subsection{Stateful Operator Migration Protocol}
+
+\section{Implementation}
+\label{sec:implementation}
+
+\subsection{HybridStream Edge Agent}
+\subsubsection{Operator Execution Engine}
+\subsubsection{State Management}
+\subsubsection{gRPC Management Interface}
+\subsubsection{Memory Footprint}
+\subsection{AODE Service}
+\subsubsection{Recalibration Loop}
+\subsubsection{High Availability}
+\subsection{HybridStream Flink Connector}
+\subsubsection{AODE Integration}
+\subsubsection{Snapshot Translation}
+\subsection{Cross-Component Communication Protocol}
+
+\section{Experimental Evaluation}
+\label{sec:evaluation}
+
+\subsection{Evaluation Platform}
+\subsection{Workload Definitions}
+\subsection{Baseline Configurations}
+\subsection{Performance Metrics}
+\subsection{Experimental Protocol}
+
+\section{Results \& Discussion}
+\label{sec:results}
+
+\subsection{RQ1: SLO Compliance and Latency Under Variable Conditions}
+\subsection{RQ2: Adaptive vs.\ Static Hybrid Placement}
+\subsection{RQ3: Overhead of the Adaptive Machinery}
+\subsection{Discussion}
+\subsubsection{Scenario-Specific Analysis}
+\subsubsection{Limitations}
+\subsubsection{Threats to Validity}
+
+\section{Conclusion \& Future Work}
+\label{sec:conclusion}
+
+\subsection{Summary of Contributions}
+\subsection{Future Work}
+
+\section*{Data Availability}
+
+The complete HybridStream reference implementation, including all source code, workload operator implementations, experiment orchestration scripts, Docker deployment configurations, and the W3 NYSE/NASDAQ trace replay filter, is publicly available at \url{https://github.com/Solarity-AI/hybridstream}.
+
+\section*{Declaration of Competing Interest}
+
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}
