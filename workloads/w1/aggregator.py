@@ -1,5 +1,6 @@
 from __future__ import annotations
 import collections
+import math
 import statistics
 from typing import Any
 from hea.execution.base_operator import BaseOperator
@@ -37,7 +38,7 @@ class FeatureAggWindow(BaseOperator):
         self._count_since_emit = 0
         window_list = list(self._window)
         sorted_w    = sorted(window_list)
-        p95_idx     = max(0, int(len(sorted_w) * 0.95) - 1)
+        p95_idx     = min(len(sorted_w) - 1, max(0, math.ceil(len(sorted_w) * 0.95) - 1))
 
         return [{
             "zone_id":      self.zone_id,

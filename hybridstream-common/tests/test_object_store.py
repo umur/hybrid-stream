@@ -129,3 +129,59 @@ async def test_exists_returns_false(mock_s3_client):
         result = await store.exists("nonexistent/key")
 
     assert result is False
+
+
+# ---------------------------------------------------------------------------
+# Additional exists() tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_exists_returns_false_for_nosuchkey_404(mock_s3_client):
+    """exists() returns False when head_object raises a 404 ClientError (NoSuchKey)."""
+    from botocore.exceptions import ClientError
+    mock_client, mock_cm = mock_s3_client
+    mock_client.head_object = AsyncMock(
+        side_effect=ClientError(
+            {"Error": {"Code": "NoSuchKey", "Message": "The specified key does not exist."}},
+            "HeadObject",
+        )
+    )
+    mock_client.exceptions = MagicMock()
+    mock_client.exceptions.ClientError = ClientError
+
+    store = _make_store()
+    with patch.object(store._session, "client", return_value=mock_cm):
+        result = await store.exists("definitely/missing/key.msgpack")
+
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_exists_swallows_all_client_errors_current_behavior(mock_s3_client):
+    """
+    Documents current behavior: exists() catches ALL ClientErrors (including
+    permission-denied) and returns False rather than re-raising.
+
+    NOTE: This is a coverage/documentation test. If the implementation is
+    hardened to only catch 404/NoSuchKey and re-raise other errors, this test
+    should be updated to assert the non-404 error IS re-raised.
+    """
+    from botocore.exceptions import ClientError
+    mock_client, mock_cm = mock_s3_client
+    # Simulate a 403 Access Denied error
+    mock_client.head_object = AsyncMock(
+        side_effect=ClientError(
+            {"Error": {"Code": "403", "Message": "Access Denied"}},
+            "HeadObject",
+        )
+    )
+    mock_client.exceptions = MagicMock()
+    mock_client.exceptions.ClientError = ClientError
+
+    store = _make_store()
+    with patch.object(store._session, "client", return_value=mock_cm):
+        # Current implementation returns False for any ClientError
+        result = await store.exists("protected/key.msgpack")
+
+    # Document actual behavior: False is returned even for permission errors
+    assert result is False

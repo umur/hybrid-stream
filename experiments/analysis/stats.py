@@ -46,6 +46,18 @@ def wilcoxon_comparison(
     assert len(group_a) == len(group_b), "Groups must be matched"
     n = len(group_a)
 
+    diffs_check = group_a - group_b
+    if np.all(diffs_check == 0):
+        return ComparisonResult(
+            metric=metric, group_a_label=label_a, group_b_label=label_b,
+            n_a=n, n_b=n,
+            median_a=float(np.median(group_a)), median_b=float(np.median(group_b)),
+            median_diff=0.0, wilcoxon_stat=0.0, wilcoxon_p=1.0,
+            bonferroni_p=1.0, significant=False,
+            effect_size_r=0.0, effect_magnitude="small",
+            bootstrap_ci_lo=0.0, bootstrap_ci_hi=0.0,
+        )
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         stat, p_value = stats.wilcoxon(group_a, group_b, alternative="two-sided")

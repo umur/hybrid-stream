@@ -37,12 +37,14 @@ public class KafkaBridgeSource {
             .setDeserializer(new RawBytesDeserializer());
 
         if (drainOffsets != null && !drainOffsets.isEmpty()) {
-            // Start exactly from drain offsets (PCTR Phase 1 handoff point)
+            // The drain offset from PCTR Phase 1 is the offset of the LAST record
+            // already consumed and processed by HEA. Flink must begin at offset+1
+            // to avoid replaying that record (which would duplicate it in the output).
             builder.setStartingOffsets(OffsetsInitializer.offsets(
                 drainOffsets.entrySet().stream()
                     .collect(java.util.stream.Collectors.toMap(
                         e -> new TopicPartition(topic, e.getKey()),
-                        Map.Entry::getValue
+                        e -> e.getValue() + 1L
                     ))
             ));
         } else {

@@ -55,16 +55,7 @@ class PlacementOptimizer:
         if not operator_types or len(available_tiers) < 2:
             return {"status": "no_operators", "duration_ms": 0}
 
-        # Build tiers in insertion order from current placement values,
-        # appending cloud if absent, to preserve alignment with scoring matrix.
-        seen = set()
-        tiers = []
-        for t in current_placement.values():
-            if t not in seen:
-                seen.add(t)
-                tiers.append(t)
-        if "cloud" not in seen:
-            tiers.append("cloud")
+        tiers = list(self._placement.get_tier_capacities().keys())
 
         slo_map = self._placement.get_slo_map()
         lambda_map = self._placement.get_lambda_map()

@@ -159,15 +159,16 @@ class TestPlacementStateSLOMap:
         assert slo["BinaryClassifier"] == 5.0
 
     def test_standard_operators_slo_values(self):
-        """Standard operators have documented SLO values."""
+        """Standard operators have documented SLO values matching state.py source."""
         state = self._make_state()
         slo = state.get_slo_map()
 
         assert slo["VehicleDetector"] == 2000.0
-        assert slo["PatternDetector"] == 5000.0
-        assert slo["NormalizerOperator"] == 10.0
-        assert slo["FeatureAggWindow"] == 50.0
-        assert slo["MultiStreamJoin"] == 100.0
+        # PatternDetector has no real-time SLO in the current implementation
+        assert slo["PatternDetector"] is None
+        assert slo["NormalizerOperator"] == 5.0
+        assert slo["FeatureAggWindow"] == 5.0
+        assert slo["MultiStreamJoin"] == 5.0
 
 
 # ---------------------------------------------------------------------------
@@ -248,3 +249,70 @@ class TestPlacementStateTierCapacities:
         assert caps["cloud"] == 100
         for i in range(1, 5):
             assert caps[f"edge-node-{i}"] == 5
+
+
+# ---------------------------------------------------------------------------
+# TestGetAvailableTiers (2 tests)
+# ---------------------------------------------------------------------------
+
+class TestGetAvailableTiers:
+    """Verify get_available_tiers returns all tiers from tier_capacities."""
+
+    def _make_state(self):
+        from aode.aode.placement.state import PlacementState
+
+        return PlacementState(etcd_client=AsyncMock())
+
+    def test_get_available_tiers_returns_all_five_tiers(self):
+        """get_available_tiers must return all 5 tiers regardless of cache contents."""
+        state = self._make_state()
+        # Only one operator is placed — available tiers must still list all 5.
+        state._cache = {"VehicleDetector": "edge-node-1"}
+
+        tiers = state.get_available_tiers()
+
+        expected = {"edge-node-1", "edge-node-2", "edge-node-3", "edge-node-4", "cloud"}
+        assert set(tiers) == expected
+
+    def test_get_available_tiers_returns_all_tiers_when_cache_empty(self):
+        """get_available_tiers must return all 5 tiers even when no operators are placed."""
+        state = self._make_state()
+        state._cache = {}
+
+        tiers = state.get_available_tiers()
+
+        expected = {"edge-node-1", "edge-node-2", "edge-node-3", "edge-node-4", "cloud"}
+        assert set(tiers) == expected
+
+
+# ---------------------------------------------------------------------------
+# TestSloMapActualValues (4 tests)
+# ---------------------------------------------------------------------------
+
+class TestSloMapActualValues:
+    """Verify get_slo_map returns the actual values defined in the source."""
+
+    def _make_state(self):
+        from aode.aode.placement.state import PlacementState
+
+        return PlacementState(etcd_client=AsyncMock())
+
+    def test_normalizer_operator_slo_is_5(self):
+        """NormalizerOperator SLO must be 5.0 ms as defined in state.py."""
+        state = self._make_state()
+        assert state.get_slo_map()["NormalizerOperator"] == 5.0
+
+    def test_feature_agg_window_slo_is_5(self):
+        """FeatureAggWindow SLO must be 5.0 ms as defined in state.py."""
+        state = self._make_state()
+        assert state.get_slo_map()["FeatureAggWindow"] == 5.0
+
+    def test_multi_stream_join_slo_is_5(self):
+        """MultiStreamJoin SLO must be 5.0 ms as defined in state.py."""
+        state = self._make_state()
+        assert state.get_slo_map()["MultiStreamJoin"] == 5.0
+
+    def test_pattern_detector_slo_is_none(self):
+        """PatternDetector has no real-time SLO; its value must be None."""
+        state = self._make_state()
+        assert state.get_slo_map()["PatternDetector"] is None

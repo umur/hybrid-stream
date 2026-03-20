@@ -94,25 +94,38 @@ public class SnapshotDeserializer {
         // Schema-driven translation
         Map<String, String> schema = schemaRegistry.getSchema(operatorType);
 
-        return rawState.entrySet().stream()
-            .filter(e -> schema.containsKey(e.getKey()))
-            .collect(
-                java.util.stream.Collectors.toMap(
-                    Map.Entry::getKey,
-                    e -> translateValue(e.getValue(), schema.get(e.getKey()))
-                )
-            );
+        // Collectors.toMap throws NullPointerException if any value is null (Python None).
+        // Use a manual accumulation into a HashMap which accepts null values.
+        Map<String, Object> result = new java.util.HashMap<>();
+        for (Map.Entry<String, Object> entry : rawState.entrySet()) {
+            if (schema.containsKey(entry.getKey())) {
+                result.put(entry.getKey(), translateValue(entry.getValue(), schema.get(entry.getKey())));
+            }
+        }
+        return result;
     }
 
     private Object translateValue(Object value, String schemaType) {
         if (value == null) return null;
         return switch (schemaType) {
-            case "float"   -> value instanceof Number ? ((Number) value).doubleValue() : Double.parseDouble(value.toString());
-            case "int"     -> value instanceof Number ? ((Number) value).longValue()   : Long.parseLong(value.toString());
-            case "boolean" -> value instanceof Boolean ? value : Boolean.parseBoolean(value.toString());
-            case "string"  -> value.toString();
-            // Lists and maps are passed through as-is (Jackson deserialization handles them)
-            default        -> value;
+            // Python float  → Java Double (preserve full IEEE-754 double precision)
+            case "float"  -> value instanceof Number ? ((Number) value).doubleValue() : Double.parseDouble(value.toString());
+            // Python int   → Java Long (Python ints are arbitrary-precision; Long covers the practical range)
+            case "int"    -> value instanceof Number ? ((Number) value).longValue()   : Long.parseLong(value.toString());
+            // Python bool  → Java Boolean  ("bool" is the canonical schema type name from hybridstream-common)
+            // "boolean" kept as alias for forwards-compatibility with any schema that uses the Java name
+            case "bool", "boolean" -> value instanceof Boolean ? value : Boolean.parseBoolean(value.toString());
+            // Python str   → Java String
+            case "str", "string"   -> value.toString();
+            // Python list  → Java List (MessagePack/Jackson already deserialises as java.util.List)
+            // Python dict  → Java Map  (MessagePack/Jackson already deserialises as java.util.Map)
+            // Both are passed through; an explicit case makes the intent visible and prevents silent fall-through.
+            case "list", "dict"    -> value;
+            default -> {
+                log.warn("Unknown schema type '{}' for value of class {} — passing through as-is",
+                         schemaType, value.getClass().getSimpleName());
+                yield value;
+            }
         };
     }
 }

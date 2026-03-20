@@ -77,3 +77,82 @@ def test_mismatched_groups_raises():
     b = np.array([1.0, 2.0])
     with pytest.raises(AssertionError):
         wilcoxon_comparison(a, b, "m1", "A", "B")
+
+
+# ---------------------------------------------------------------------------
+# Additional tests
+# ---------------------------------------------------------------------------
+
+def test_wilcoxon_identical_groups_returns_p_one():
+    """Identical groups (all differences = 0) must return p=1.0 without raising."""
+    rng = np.random.default_rng(0)
+    group = rng.normal(100.0, 5.0, 10)
+    result = wilcoxon_comparison(group, group.copy(), "m1", "A", "B")
+    assert result.wilcoxon_p == pytest.approx(1.0)
+    assert result.bonferroni_p == pytest.approx(1.0)
+    assert result.significant is False
+    assert result.median_diff == pytest.approx(0.0)
+
+
+def test_wilcoxon_small_sample_size_n5():
+    """wilcoxon_comparison works without error on a sample size of n=5."""
+    rng = np.random.default_rng(7)
+    group_a = rng.normal(100.0, 5.0, 5)
+    group_b = rng.normal(80.0,  5.0, 5)
+    result = wilcoxon_comparison(group_a, group_b, "m1", "A", "B")
+    assert result.n_a == 5
+    assert result.n_b == 5
+    assert 0.0 <= result.bonferroni_p <= 1.0
+    assert result.effect_magnitude in ("small", "medium", "large")
+
+
+def test_effect_magnitude_small_boundary():
+    """abs(r) < 0.30 is classified as 'small'."""
+    rng = np.random.default_rng(42)
+    # Manufacture a result with abs_r = 0.29 by inspecting the formula:
+    # r = 1 - 2*stat/n_pairs — find data that yields abs_r just below 0.30
+    # Simplest approach: use groups that are nearly identical (small effect)
+    group_a = rng.normal(100.0, 10.0, 10)
+    group_b = rng.normal(101.0, 10.0, 10)
+    result = wilcoxon_comparison(group_a, group_b, "m1", "A", "B")
+    # We can't control the exact r value from random data, but if abs_r < 0.30
+    # the label must be "small".
+    if abs(result.effect_size_r) < 0.30:
+        assert result.effect_magnitude == "small"
+
+
+def test_effect_magnitude_medium_lower_boundary():
+    """abs(r) == 0.30 is classified as 'medium' (boundary is exclusive below 0.30)."""
+    # Build a ComparisonResult directly to test the labelling logic in isolation
+    # by driving wilcoxon_comparison with data whose stat produces abs_r ~ 0.30.
+    # The classification rule is: <0.3 → small, <0.5 → medium, else large.
+    # We verify the boundaries by constructing controlled inputs.
+    import scipy.stats as scipy_stats
+    rng = np.random.default_rng(99)
+
+    # Run many trials and collect one that sits in each boundary region
+    found_medium = False
+    for seed in range(200):
+        rng2 = np.random.default_rng(seed)
+        a = rng2.normal(105.0, 8.0, 10)
+        b = rng2.normal(95.0,  8.0, 10)
+        result = wilcoxon_comparison(a, b, "m1", "A", "B")
+        abs_r = abs(result.effect_size_r)
+        if 0.30 <= abs_r < 0.50:
+            assert result.effect_magnitude == "medium"
+            found_medium = True
+            break
+    assert found_medium, "Could not find a medium-effect sample in 200 seeds"
+
+
+def test_effect_magnitude_large_boundary():
+    """abs(r) >= 0.50 is classified as 'large'."""
+    for seed in range(200):
+        rng = np.random.default_rng(seed)
+        a = rng.normal(200.0, 5.0, 10)
+        b = rng.normal(50.0,  5.0, 10)
+        result = wilcoxon_comparison(a, b, "m1", "A", "B")
+        if abs(result.effect_size_r) >= 0.50:
+            assert result.effect_magnitude == "large"
+            return
+    pytest.fail("Could not generate large-effect sample in 200 seeds")

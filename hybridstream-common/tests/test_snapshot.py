@@ -185,3 +185,28 @@ def test_deserialize_raises_on_unknown_operator_class():
     raw = header + payload
     with pytest.raises(KeyError, match="Schema not found"):
         deserialize(raw, registry)
+
+
+# ---------------------------------------------------------------------------
+# Additional error-handling tests
+# ---------------------------------------------------------------------------
+
+def test_deserialize_empty_payload_raises_value_error():
+    """deserialize with exactly 6 header bytes and no msgpack data raises ValueError."""
+    registry = _registry()
+    # Valid magic + version, but zero payload bytes
+    raw = MAGIC + struct.pack(">H", 1)
+    assert len(raw) == 6
+    with pytest.raises(ValueError, match="empty"):
+        deserialize(raw, registry)
+
+
+def test_deserialize_corrupted_msgpack_payload_raises_value_error():
+    """deserialize with valid header but garbage msgpack payload raises ValueError."""
+    registry = _registry()
+    header = MAGIC + struct.pack(">H", 1)
+    # Deliberately invalid msgpack bytes
+    corrupted_payload = b"\xff\xfe\xfd\xfc\xfb"
+    raw = header + corrupted_payload
+    with pytest.raises(ValueError, match="Failed to unpack snapshot payload"):
+        deserialize(raw, registry)

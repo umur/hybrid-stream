@@ -3,12 +3,14 @@ package ai.hybridstream.connector.operator;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
-import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -28,7 +30,11 @@ public class MigratedOperator extends RichFlatMapFunction<Map<String, Object>, M
 
     private final String operatorId;
     private final String operatorType;
-    private final Map<String, Object> restoredState;     // From PCTR Phase 3 snapshot
+    // restoredState is only used in open() before the operator is distributed.
+    // Marked transient so Flink's serialization framework does not attempt to
+    // serialise the raw Map (which may contain non-serializable values from
+    // MessagePack deserialization). State is seeded into flinkState inside open().
+    private transient Map<String, Object> restoredState;
     private final OperatorLogic logic;                    // Type-specific processing logic
 
     // Flink-managed state (takes over from restored snapshot after first checkpoint)
@@ -50,18 +56,26 @@ public class MigratedOperator extends RichFlatMapFunction<Map<String, Object>, M
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
 
-        // Register Flink state descriptor
+        // Types.MAP(Types.STRING, Types.POJO(Object.class)) is invalid: Object is not a
+        // POJO type and causes an InvalidTypesException at runtime.
+        // Use TypeInformation.of(new TypeHint<>(){}) which resolves the full generic type
+        // via reflection and falls back to Kryo serialization for the map values.
         ValueStateDescriptor<Map<String, Object>> descriptor =
             new ValueStateDescriptor<>(
                 "operator-state-" + operatorId,
-                Types.MAP(Types.STRING, Types.POJO(Object.class))
+                TypeInformation.of(new TypeHint<Map<String, Object>>() {})
             );
         flinkState = getRuntimeContext().getState(descriptor);
 
-        // Restore state from PCTR snapshot into Flink state
+        // Restore state from PCTR snapshot into Flink state.
+        // Use a defensive copy so operator mutations during flatMap do not alias
+        // back into the original restoredState map (which may still be referenced
+        // by the constructor argument after open() returns in local-mode tests).
         if (restoredState != null && !restoredState.isEmpty()) {
-            flinkState.update(restoredState);
+            flinkState.update(new HashMap<>(restoredState));
             log.info("Restored {} state for operator {}: {} fields", operatorType, operatorId, restoredState.size());
+            // Release the reference so the snapshot bytes can be GC'd after open().
+            restoredState = null;
         }
     }
 

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 import grpc
 
@@ -42,7 +43,7 @@ class HEAManagementServicer(pb2_grpc.HEAManagementServicer):
             memory_utilization = self._metrics.memory_utilization,
             ingest_rate_eps    = self._metrics.ingest_rate_eps,
             operator_p95_ms    = p95,
-            timestamp_ms       = int(asyncio.get_event_loop().time() * 1000),
+            timestamp_ms       = int(time.time() * 1000),
             reachable          = True,
         )
 

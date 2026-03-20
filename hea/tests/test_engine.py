@@ -172,6 +172,127 @@ class TestCpuBoundDetection:
         await engine.stop()
 
 
+class TestStartStopLifecycle:
+
+    @pytest.mark.asyncio
+    async def test_start_creates_process_pool(self):
+        engine, *_ = _make_engine()
+        assert engine._pool is None
+        await engine.start()
+        assert engine._pool is not None
+        await engine.stop()
+
+    @pytest.mark.asyncio
+    async def test_start_sets_running_flag(self):
+        engine, *_ = _make_engine()
+        assert engine._running is False
+        await engine.start()
+        assert engine._running is True
+        await engine.stop()
+
+    @pytest.mark.asyncio
+    async def test_stop_clears_running_flag(self):
+        engine, *_ = _make_engine()
+        await engine.start()
+        await engine.stop()
+        assert engine._running is False
+
+    @pytest.mark.asyncio
+    async def test_stop_shuts_down_pool(self):
+        engine, *_ = _make_engine()
+        await engine.start()
+        pool = engine._pool
+        await engine.stop()
+        # After shutdown, the pool's _broken flag is set or it is no longer accepting
+        assert pool._broken or pool._shutdown_thread
+
+
+class TestDeregisterOperatorNoOp:
+
+    @pytest.mark.asyncio
+    async def test_deregister_nonexistent_operator_does_not_raise(self):
+        engine, *_ = _make_engine()
+        await engine.start()
+        # Should complete without raising any exception
+        await engine.deregister_operator("does_not_exist")
+        await engine.stop()
+
+    @pytest.mark.asyncio
+    async def test_deregister_nonexistent_operator_leaves_state_intact(self):
+        engine, *_ = _make_engine()
+        await engine.start()
+
+        op = _make_io_operator()
+        with patch.object(engine, "_start_consumer", new_callable=AsyncMock):
+            await engine.register_operator(op, ["in"], ["out"])
+
+        # Deregister a ghost; real operator must survive
+        await engine.deregister_operator("ghost_op")
+        assert "io_op" in engine._operators
+        await engine.stop()
+
+
+class TestDeserializeRecordValid:
+
+    def test_deserializes_simple_dict(self):
+        from hea.hea.execution.engine import OperatorEngine
+        payload = {"sensor": "s01", "value": 3.14}
+        packed = __import__("msgpack").packb(payload, use_bin_type=True)
+        result = OperatorEngine._deserialize_record(packed)
+        assert result == payload
+
+    def test_deserializes_integer_values(self):
+        from hea.hea.execution.engine import OperatorEngine
+        payload = {"count": 0, "offset": 9_999_999}
+        packed = __import__("msgpack").packb(payload, use_bin_type=True)
+        result = OperatorEngine._deserialize_record(packed)
+        assert result["count"] == 0
+        assert result["offset"] == 9_999_999
+
+    def test_deserializes_boolean_values(self):
+        from hea.hea.execution.engine import OperatorEngine
+        payload = {"active": True, "error": False}
+        packed = __import__("msgpack").packb(payload, use_bin_type=True)
+        result = OperatorEngine._deserialize_record(packed)
+        assert result["active"] is True
+        assert result["error"] is False
+
+
+class TestRegisterOperatorCallsOnStart:
+
+    @pytest.mark.asyncio
+    async def test_register_calls_on_start(self):
+        engine, *_ = _make_engine()
+        await engine.start()
+
+        op = _make_io_operator()
+        op.on_start = MagicMock()
+
+        with patch.object(engine, "_start_consumer", new_callable=AsyncMock):
+            await engine.register_operator(op, ["in"], ["out"])
+
+        op.on_start.assert_called_once()
+        await engine.stop()
+
+    @pytest.mark.asyncio
+    async def test_register_multiple_operators_each_calls_on_start(self):
+        engine, *_ = _make_engine()
+        await engine.start()
+
+        op1 = _make_io_operator("op1", "IOOp1")
+        op2 = _make_io_operator("op2", "IOOp2")
+        op1.on_start = MagicMock()
+        op2.on_start = MagicMock()
+
+        with patch.object(engine, "_start_consumer", new_callable=AsyncMock):
+            await engine.register_operator(op1, ["in"], ["out"])
+            await engine.register_operator(op2, ["in"], ["out"])
+
+        op1.on_start.assert_called_once()
+        op2.on_start.assert_called_once()
+        await engine.stop()
+
+
 class TestBackpressure:
 
     @pytest.mark.asyncio

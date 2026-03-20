@@ -179,5 +179,10 @@ class OperatorEngine:
 
 
 def _run_operator_sync(operator: BaseOperator, record: dict) -> list[dict]:
+    # asyncio.run() creates a new event loop for each call. This is intentional:
+    # this function executes inside a ProcessPoolExecutor worker process where no
+    # event loop exists. The overhead of loop creation is acceptable here because
+    # CPU-bound operators are by definition compute-heavy, so loop startup cost
+    # is negligible relative to the operator's own processing time.
     import asyncio
     return asyncio.run(operator.process(record))

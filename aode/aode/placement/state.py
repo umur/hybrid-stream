@@ -33,20 +33,20 @@ class PlacementState:
         return [op for op, t in self._cache.items() if t == tier_id]
 
     def get_available_tiers(self) -> List[str]:
-        return sorted(set(self._cache.values()))
+        return list(self.get_tier_capacities().keys())
 
     def get_slo_map(self) -> Dict[str, Optional[float]]:
         return {
             "VehicleDetector":    2000.0,
             "ZoneAggregator":     None,
-            "PatternDetector":    5000.0,
+            "PatternDetector":    None,
             "RiskCheck":          1.0,
             "AnomalyDetector":    5.0,
             "StatAggregator":     None,
             "ComplianceLogger":   None,
-            "NormalizerOperator": 10.0,
-            "FeatureAggWindow":   50.0,
-            "MultiStreamJoin":    100.0,
+            "NormalizerOperator": 5.0,
+            "FeatureAggWindow":   5.0,
+            "MultiStreamJoin":    5.0,
             "BinaryClassifier":   5.0,
         }
 

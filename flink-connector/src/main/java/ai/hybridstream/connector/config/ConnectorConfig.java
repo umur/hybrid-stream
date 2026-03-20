@@ -31,10 +31,23 @@ public class ConnectorConfig {
     }
     private static int intEnv(String key, int def) {
         String v = System.getenv(key);
-        return v != null ? Integer.parseInt(v) : def;
+        if (v == null) return def;
+        try {
+            return Integer.parseInt(v.trim());
+        } catch (NumberFormatException e) {
+            // Log a warning and fall back to the default rather than crashing startup.
+            System.err.printf("[ConnectorConfig] WARNING: env var %s='%s' is not a valid integer, using default %d%n", key, v, def);
+            return def;
+        }
     }
     private static long longEnv(String key, long def) {
         String v = System.getenv(key);
-        return v != null ? Long.parseLong(v) : def;
+        if (v == null) return def;
+        try {
+            return Long.parseLong(v.trim());
+        } catch (NumberFormatException e) {
+            System.err.printf("[ConnectorConfig] WARNING: env var %s='%s' is not a valid long, using default %d%n", key, v, def);
+            return def;
+        }
     }
 }

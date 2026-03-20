@@ -60,7 +60,8 @@ class ZoneAggregator(BaseOperator):
     def restore_state(self, state: dict[str, Any]) -> None:
         self._zone_id       = state.get("zone_id",      self._zone_id)
         self._n_sensors     = int(state.get("n_sensors",    25))
-        self._sensor_counts = state.get("sensor_counts", {})
+        raw = state.get("sensor_counts", {})
+        self._sensor_counts = {str(k): int(v) for k, v in raw.items()}
         self._zone_total    = int(state.get("zone_total",    0))
         self._emit_interval = float(state.get("emit_interval", 5.0))
         self._last_emit_ts  = time.monotonic()

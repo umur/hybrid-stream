@@ -1,3 +1,4 @@
+import math
 import time
 import asyncio
 import logging
@@ -38,7 +39,7 @@ class HEAMetrics:
         for oid, samples in self._latency_samples.items():
             if samples:
                 sorted_s = sorted(samples)
-                idx = max(0, int(len(sorted_s) * 0.95) - 1)
+                idx = min(len(sorted_s) - 1, max(0, math.ceil(len(sorted_s) * 0.95) - 1))
                 result[oid] = sorted_s[idx]
         return result
 

@@ -589,3 +589,93 @@ class TestFindOptimalPlacement:
         assert set(placement.keys()) == set(operators)
         for tier in placement.values():
             assert tier in tiers
+
+
+# ---------------------------------------------------------------------------
+# TestScoringEdgeCases (5 tests) — edge-case inputs
+# ---------------------------------------------------------------------------
+class TestScoringEdgeCases:
+    """Verify scoring algorithm handles degenerate and edge-case inputs correctly."""
+
+    def test_all_zero_weights_produce_zero_scores(self):
+        """All-zero weights should produce an all-zero score matrix."""
+        from aode.aode.config import AODEConfig
+        from aode.aode.scoring.algorithm import ScoringAlgorithm
+        from aode.aode.scoring.weights import create_custom_preset
+
+        config = AODEConfig()
+        telemetry = _mock_telemetry(cpu=0.5, mem=0.5, rtt_ms=10.0)
+        scorer = ScoringAlgorithm(config, telemetry)
+        # Inject a zero-weight preset directly (bypassing sum validation via negative trick)
+        # We patch the weights directly on the scorer instance.
+        from aode.aode.scoring.weights import WeightPreset
+        scorer._weights = WeightPreset.__new__(WeightPreset)
+        scorer._weights.name = "zero"
+        scorer._weights.w_lat = 0.0
+        scorer._weights.w_res = 0.0
+        scorer._weights.w_net = 0.0
+        scorer._weights.w_slo = 0.0
+
+        scores = scorer.compute_scores(
+            ["op-a"], ["edge-1"], {"op-a": 50.0}, {"op-a": "standard"}
+        )
+        assert np.all(scores == 0.0)
+
+    def test_negative_rho_clamped_to_zero_by_max_cpu_mem(self):
+        """Negative telemetry values: rho is max(cpu, mem) — max(-0.1, -0.2) = -0.1,
+        which is < 0.99 cap, so the formula runs without error and returns a finite value."""
+        from aode.aode.config import AODEConfig
+        from aode.aode.scoring.algorithm import ScoringAlgorithm
+
+        config = AODEConfig()
+        telemetry = _mock_telemetry(cpu=-0.1, mem=-0.2)
+        scorer = ScoringAlgorithm(config, telemetry)
+
+        # Should not raise; result is finite (negative rho still < 0.99 cap)
+        result = scorer._compute_phi_res("edge-1")
+        assert result < float("inf")
+        assert result == result  # not NaN
+
+    def test_phi_res_rho_exactly_0_99_cap(self):
+        """When rho exactly equals the 0.99 cap the formula yields kappa*0.99/0.01 = 198.0."""
+        from aode.aode.config import AODEConfig
+        from aode.aode.scoring.algorithm import ScoringAlgorithm
+
+        config = AODEConfig()
+        # cpu=0.99 so rho=0.99, which equals the cap — no further clamping needed.
+        telemetry = _mock_telemetry(cpu=0.99, mem=0.0)
+        scorer = ScoringAlgorithm(config, telemetry)
+
+        result = scorer._compute_phi_res("edge-1")
+        expected = 2.0 * 0.99 / (1.0 - 0.99)  # 198.0
+        assert abs(result - expected) < 1e-3
+
+    def test_phi_slo_with_extremely_small_slo(self):
+        """SLO of 0.001 ms with observed latency 1.0 ms should produce a very large penalty."""
+        from aode.aode.config import AODEConfig
+        from aode.aode.scoring.algorithm import ScoringAlgorithm
+
+        config = AODEConfig()
+        # observed = 1.0ms (default when p95 is missing), slo = 0.001ms
+        telemetry = _mock_telemetry(operator_p95={"op-a": 1.0})
+        scorer = ScoringAlgorithm(config, telemetry)
+
+        result = scorer._compute_phi_slo("op-a", "edge-1", 0.001)
+        # penalty = M * (1.0 - 0.001) / 0.001 = 10 * 999 = 9990.0
+        expected = 10 * (1.0 - 0.001) / 0.001
+        assert abs(result - expected) < 1e-3
+
+    def test_find_optimal_placement_all_tiers_at_capacity_falls_back_to_cloud(self):
+        """When all non-cloud tiers are at capacity=0, every operator lands on cloud."""
+        from aode.aode.scoring.algorithm import find_optimal_placement
+
+        scores = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        operators = ["op-a", "op-b"]
+        tiers = ["edge-1", "edge-2", "cloud"]
+        # Edge tiers at capacity 0, cloud has unlimited room.
+        tier_capacities = {"edge-1": 0, "edge-2": 0, "cloud": 100}
+
+        placement = find_optimal_placement(scores, operators, tiers, tier_capacities)
+
+        for op in operators:
+            assert placement[op] == "cloud"

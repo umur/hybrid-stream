@@ -22,6 +22,7 @@ import org.msgpack.jackson.dataformat.MessagePackFactory;
 import java.nio.file.*;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -80,17 +81,27 @@ class FlinkConnectorServiceImplTest {
         service = new FlinkConnectorServiceImpl(config, minioClient, schemaRegistry);
     }
 
+    // ── Proto field reference guide (from hybridstream.proto) ─────────────────
+    // RestoreRequest  : operation_id, operator_id, object_key, operator_type, drain_offset
+    // RestoreResponse : operation_id, success, flink_job_id, error_message, started_at_ms
+    // TerminateRequest: operator_id, flush_state, migration_buffer_topic
+    // TerminateAck    : operator_id, success, error_msg
+    // JobStatusRequest: flink_job_id
+    // JobStatusResponse: operator_id, job_id, status, last_checkpoint, metrics_json
+
     @Test
     void testRestoreOperatorSuccess() throws Exception {
-        String operatorId  = "test-operator";
-        String snapshotKey = "test-snapshot-key";
+        String operatorId   = "test-operator";
+        String snapshotKey  = "test-snapshot-key";
         String operatorType = "VehicleDetector";
+        String operationId  = "op-001";
 
         when(minioClient.downloadSnapshot(snapshotKey)).thenReturn(buildValidSnapshot());
 
         RestoreRequest request = RestoreRequest.newBuilder()
+            .setOperationId(operationId)
             .setOperatorId(operatorId)
-            .setSnapshotObjectKey(snapshotKey)
+            .setObjectKey(snapshotKey)
             .setOperatorType(operatorType)
             .build();
 
@@ -98,9 +109,9 @@ class FlinkConnectorServiceImplTest {
 
         verify(minioClient).downloadSnapshot(snapshotKey);
         verify(restoreResponseObserver).onNext(argThat(response ->
-            response.getOperatorId().equals(operatorId) &&
+            response.getOperationId().equals(operationId) &&
             response.getSuccess() &&
-            !response.getJobId().isEmpty()
+            !response.getFlinkJobId().isEmpty()
         ));
         verify(restoreResponseObserver).onCompleted();
     }
@@ -109,21 +120,23 @@ class FlinkConnectorServiceImplTest {
     void testRestoreOperatorFailure() throws Exception {
         String operatorId  = "test-operator";
         String snapshotKey = "test-snapshot-key";
+        String operationId = "op-002";
 
         when(minioClient.downloadSnapshot(snapshotKey)).thenThrow(new RuntimeException("MinIO error"));
 
         RestoreRequest request = RestoreRequest.newBuilder()
+            .setOperationId(operationId)
             .setOperatorId(operatorId)
-            .setSnapshotObjectKey(snapshotKey)
+            .setObjectKey(snapshotKey)
             .setOperatorType("VehicleDetector")
             .build();
 
         service.restoreOperator(request, restoreResponseObserver);
 
         verify(restoreResponseObserver).onNext(argThat(response ->
-            response.getOperatorId().equals(operatorId) &&
+            response.getOperationId().equals(operationId) &&
             !response.getSuccess() &&
-            response.getErrorMsg().contains("MinIO error")
+            response.getErrorMessage().contains("MinIO error")
         ));
         verify(restoreResponseObserver).onCompleted();
     }
@@ -136,8 +149,9 @@ class FlinkConnectorServiceImplTest {
         // Restore first to register a job ID
         when(minioClient.downloadSnapshot(anyString())).thenReturn(buildValidSnapshot());
         RestoreRequest restoreRequest = RestoreRequest.newBuilder()
+            .setOperationId("op-003")
             .setOperatorId(operatorId)
-            .setSnapshotObjectKey("test-key")
+            .setObjectKey("test-key")
             .setOperatorType("VehicleDetector")
             .build();
         service.restoreOperator(restoreRequest, mock(StreamObserver.class));
@@ -158,17 +172,14 @@ class FlinkConnectorServiceImplTest {
 
     @Test
     void testTerminateOperatorNotFound() {
-        // Arrange
         String operatorId = "nonexistent-operator";
 
         TerminateRequest request = TerminateRequest.newBuilder()
             .setOperatorId(operatorId)
             .build();
 
-        // Act
         service.terminateOperator(request, terminateResponseObserver);
 
-        // Assert
         verify(terminateResponseObserver).onNext(argThat(response ->
             response.getOperatorId().equals(operatorId) &&
             !response.getSuccess() &&
@@ -179,22 +190,80 @@ class FlinkConnectorServiceImplTest {
 
     @Test
     void testGetJobStatusNotFound() {
-        // Arrange
-        String operatorId = "nonexistent-operator";
+        // Use a flink_job_id that was never registered
+        String unknownJobId = "flink-job-nonexistent";
 
         JobStatusRequest request = JobStatusRequest.newBuilder()
-            .setOperatorId(operatorId)
+            .setFlinkJobId(unknownJobId)
             .build();
 
-        // Act
         service.getJobStatus(request, statusResponseObserver);
 
-        // Assert
         verify(statusResponseObserver).onNext(argThat(response ->
-            response.getOperatorId().equals(operatorId) &&
             response.getJobId().isEmpty() &&
             response.getStatus().equals("NOT_FOUND")
         ));
         verify(statusResponseObserver).onCompleted();
+    }
+
+    // ── New tests ─────────────────────────────────────────────────────────────
+
+    /**
+     * When the exception thrown during snapshot download has a null message
+     * (as NullPointerException does by default), restoreOperator must not itself
+     * throw a NullPointerException when constructing the error response proto.
+     * The error_message field must fall back to the exception class name.
+     */
+    @Test
+    void testRestoreOperatorWithNullExceptionMessage() throws Exception {
+        String operatorId  = "null-msg-operator";
+        String snapshotKey = "any-key";
+        String operationId = "op-npe";
+
+        // NullPointerException with no message → getMessage() returns null
+        when(minioClient.downloadSnapshot(snapshotKey))
+            .thenThrow(new NullPointerException());   // getMessage() == null
+
+        RestoreRequest request = RestoreRequest.newBuilder()
+            .setOperationId(operationId)
+            .setOperatorId(operatorId)
+            .setObjectKey(snapshotKey)
+            .setOperatorType("VehicleDetector")
+            .build();
+
+        // Must not throw
+        assertDoesNotThrow(() -> service.restoreOperator(request, restoreResponseObserver));
+
+        verify(restoreResponseObserver).onNext(argThat(response ->
+            response.getOperationId().equals(operationId) &&
+            !response.getSuccess() &&
+            // Fallback must be the class name (not null, not empty)
+            !response.getErrorMessage().isEmpty()
+        ));
+        verify(restoreResponseObserver).onCompleted();
+    }
+
+    /**
+     * terminateOperator for an operator that was never restored must respond with
+     * success=false and an error_msg that identifies the operator.
+     * Verifies that onCompleted is called exactly once (no double-completion).
+     */
+    @Test
+    void testTerminateNonExistentOperatorReturnsDescriptiveError() {
+        String operatorId = "ghost-operator-" + System.nanoTime();
+
+        TerminateRequest request = TerminateRequest.newBuilder()
+            .setOperatorId(operatorId)
+            .build();
+
+        service.terminateOperator(request, terminateResponseObserver);
+
+        verify(terminateResponseObserver).onNext(argThat(response ->
+            response.getOperatorId().equals(operatorId) &&
+            !response.getSuccess() &&
+            response.getErrorMsg().contains(operatorId)
+        ));
+        // onCompleted must be called exactly once even in the not-found branch
+        verify(terminateResponseObserver, times(1)).onCompleted();
     }
 }

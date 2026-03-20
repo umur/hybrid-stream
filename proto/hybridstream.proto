@@ -104,3 +104,43 @@ message MigrationState {
   int64  started_at_ms  = 9;
   int64  updated_at_ms  = 10;
 }
+
+// ─────────────────────────────────────────────────
+// FlinkConnector service (PCTR Phase 3 operations)
+// ─────────────────────────────────────────────────
+
+service FlinkConnector {
+  rpc RestoreOperator   (RestoreRequest)   returns (RestoreResponse);
+  rpc TerminateOperator (TerminateRequest) returns (TerminateAck);
+  rpc GetJobStatus      (JobStatusRequest) returns (JobStatusResponse);
+}
+
+// RestoreOperator — Download snapshot from MinIO, deserialize, start Flink job
+message RestoreRequest {
+  string operation_id   = 1;   // UUID for tracking
+  string operator_id    = 2;   // target operator
+  string object_key     = 3;   // MinIO object path
+  string operator_type  = 4;   // for schema validation
+  string drain_offset   = 5;   // Kafka offset to resume from
+}
+
+message RestoreResponse {
+  string operation_id   = 1;   // echoed from request
+  bool   success        = 2;
+  string flink_job_id   = 3;   // Flink job ID if successful
+  string error_message  = 4;   // if success = false
+  int64  started_at_ms  = 5;   // when job started
+}
+
+// GetJobStatus — Check if a Flink job is healthy
+message JobStatusRequest {
+  string flink_job_id = 1;
+}
+
+message JobStatusResponse {
+  string operator_id      = 1;
+  string job_id           = 2;
+  string status           = 3;   // RUNNING, FAILED, FINISHED, etc.
+  int64  last_checkpoint  = 4;   // last successful checkpoint timestamp
+  string metrics_json     = 5;   // JSON blob of job metrics
+}

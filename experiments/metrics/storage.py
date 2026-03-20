@@ -55,7 +55,9 @@ def load_all_results() -> pd.DataFrame:
         raise FileNotFoundError(f"No results found in {RESULTS_DIR}")
 
     combined = pd.concat(all_dfs, ignore_index=True)
-    parsed = combined["config_id"].str.split("-", expand=True)
+    parsed = combined["config_id"].str.split("-", n=2, expand=True)
+    if parsed.shape[1] < 3:
+        raise ValueError("config_id must have format 'workload-system-network'")
     combined["workload"] = parsed[0]
     combined["system"]   = parsed[1]
     combined["network"]  = parsed[2]

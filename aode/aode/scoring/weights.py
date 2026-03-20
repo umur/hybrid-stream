@@ -13,7 +13,7 @@ class WeightPreset:
 
     def __post_init__(self):
         total = self.w_lat + self.w_res + self.w_net + self.w_slo
-        if not math.isclose(total, 1.0, rel_tol=0.01):
+        if not math.isclose(total, 1.0, abs_tol=0.01):
             raise ValueError(f"Weight preset '{self.name}': weights must sum to 1.0 (got {total})")
 
 

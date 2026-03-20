@@ -50,7 +50,10 @@ public class OperatorFactory {
             case "FeatureAggWindow" -> (record, state) -> {
                 // Sliding window aggregation: sum, count, min, max
                 @SuppressWarnings("unchecked")
-                List<Double> window = (List<Double>) state.getOrDefault("window", new ArrayList<>());
+                // Defensive copy: the list from state may be an immutable List.of(...)
+                // (e.g. produced by a prior ProcessResult) — mutating it directly would
+                // throw UnsupportedOperationException.
+                List<Double> window = new ArrayList<>((List<Double>) state.getOrDefault("window", new ArrayList<>()));
                 double value = getDouble(record, "value", 0.0);
                 window.add(value);
 
@@ -120,7 +123,9 @@ public class OperatorFactory {
                 // Aggregate vehicle counts per zone
                 String zone = (String) record.getOrDefault("zone_id", "unknown");
                 @SuppressWarnings("unchecked")
-                Map<String, Integer> counts = (Map<String, Integer>) state.getOrDefault("zone_counts", new HashMap<>());
+                // Defensive copy: map from state may be unmodifiable (e.g. Map.of or
+                // a prior snapshot restored via Collections.unmodifiableMap).
+                Map<String, Integer> counts = new HashMap<>((Map<String, Integer>) state.getOrDefault("zone_counts", new HashMap<>()));
                 boolean detected = (boolean) record.getOrDefault("vehicle_detected", false);
 
                 if (detected) {
@@ -142,7 +147,8 @@ public class OperatorFactory {
             case "PatternDetector" -> (record, state) -> {
                 // Pattern detection over sliding window
                 @SuppressWarnings("unchecked")
-                List<Boolean> pattern = (List<Boolean>) state.getOrDefault("pattern", new ArrayList<>());
+                // Defensive copy: same immutability risk as FeatureAggWindow.
+                List<Boolean> pattern = new ArrayList<>((List<Boolean>) state.getOrDefault("pattern", new ArrayList<>()));
                 boolean detected = (boolean) record.getOrDefault("vehicle_detected", false);
                 pattern.add(detected);
 

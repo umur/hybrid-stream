@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import math
 import time
 import logging
 import statistics
@@ -104,7 +105,8 @@ class MetricsCollector:
         for op_type, samples in self._latency_samples.items():
             if samples:
                 sorted_s = sorted(samples[-1000:])
-                m1[op_type] = sorted_s[max(0, int(len(sorted_s) * 0.95) - 1)]
+                idx = min(len(sorted_s) - 1, max(0, math.ceil(len(sorted_s) * 0.95) - 1))
+                m1[op_type] = sorted_s[idx]
         self._latency_samples.clear()
 
         # M2

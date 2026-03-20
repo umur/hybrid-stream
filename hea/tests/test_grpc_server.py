@@ -122,10 +122,8 @@ class TestGetTelemetry:
         mock_pb2.TelemetryResponse = MockTelemetryResponse
 
         with patch("hea.hea.grpc.server.pb2", mock_pb2), \
-             patch("hea.hea.grpc.server.asyncio") as mock_asyncio:
-            mock_loop = MagicMock()
-            mock_loop.time.return_value = 5.5
-            mock_asyncio.get_event_loop.return_value = mock_loop
+             patch("hea.hea.grpc.server.time") as mock_time:
+            mock_time.time.return_value = 5.5
 
             result = servicer.GetTelemetry(MagicMock(), MagicMock())
 

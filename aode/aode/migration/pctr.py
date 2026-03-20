@@ -93,7 +93,10 @@ class PCTRMigration:
             target_client = self._hea_clients.get(self.target_tier)
             if not target_client:
                 raise ValueError(f"No HEA client for target tier: {self.target_tier}")
-            await asyncio.sleep(0.1)
+            await target_client.restore_operator(
+                operator_id=self.operator_id,
+                snapshot_key=self.snapshot_object_key,
+            )
 
     async def _phase_4_terminate(self) -> None:
         self.phase = MigrationPhase.PHASE_4_TERM

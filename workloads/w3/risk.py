@@ -36,7 +36,7 @@ class RiskCheck(BaseOperator):
         return "critical"
 
     async def process(self, record: dict[str, Any]) -> list[dict[str, Any]]:
-        exposure = float(record.get("exposure", 0.0))
+        exposure = max(0.0, float(record.get("exposure", 0.0)))
         self._total_checked += 1
         exceeded = exposure > self._limit
         if exceeded:

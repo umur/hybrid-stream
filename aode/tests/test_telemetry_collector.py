@@ -345,3 +345,120 @@ class TestCollectOne:
 
         assert result.cpu_utilization == 0.0
         assert result.memory_utilization == 0.0
+
+
+# ---------------------------------------------------------------------------
+# TestRegisterHea (3 tests)
+# ---------------------------------------------------------------------------
+class TestRegisterHea:
+    """Verify register_hea adds a placeholder entry and is idempotent."""
+
+    def test_register_hea_adds_placeholder_entry(self):
+        """Calling register_hea with a new id must add a key to _last_telemetry."""
+        collector = _make_collector()
+        # Clear any endpoints registered by AODEConfig defaults
+        collector._last_telemetry.clear()
+
+        collector.register_hea("new-edge-5")
+
+        assert "new-edge-5" in collector._last_telemetry
+
+    def test_register_hea_placeholder_is_unreachable(self):
+        """The placeholder entry created by register_hea must have reachable=False."""
+        collector = _make_collector()
+        collector._last_telemetry.clear()
+
+        collector.register_hea("new-edge-5")
+
+        assert collector._last_telemetry["new-edge-5"].reachable is False
+
+    def test_register_hea_is_idempotent(self):
+        """Calling register_hea twice for the same id must not overwrite an existing entry."""
+        collector = _make_collector()
+        collector._last_telemetry.clear()
+
+        collector.register_hea("new-edge-5")
+        # Manually set a field so we can detect if it gets overwritten
+        collector._last_telemetry["new-edge-5"].cpu_utilization = 0.77
+        collector.register_hea("new-edge-5")
+
+        assert collector._last_telemetry["new-edge-5"].cpu_utilization == 0.77
+
+
+# ---------------------------------------------------------------------------
+# TestTelemetryCollectorInit (2 tests)
+# ---------------------------------------------------------------------------
+class TestTelemetryCollectorInit:
+    """Verify __init__ registers all HEAs listed in config.hea_endpoints."""
+
+    def test_init_registers_heas_from_config_endpoints(self):
+        """Every host in config.hea_endpoints should appear in _last_telemetry after init."""
+        from aode.aode.config import AODEConfig
+        from aode.aode.telemetry.collector import TelemetryCollector
+
+        config = AODEConfig()
+        # Default config has 4 HEA endpoints: edge-node-1..4:50051
+        collector = TelemetryCollector(config)
+
+        expected_ids = {ep.split(":")[0] for ep in config.hea_endpoints}
+        assert expected_ids.issubset(set(collector._last_telemetry.keys()))
+
+    def test_init_registered_heas_start_unreachable(self):
+        """HEAs registered during __init__ must start as unreachable placeholders."""
+        from aode.aode.config import AODEConfig
+        from aode.aode.telemetry.collector import TelemetryCollector
+
+        config = AODEConfig()
+        collector = TelemetryCollector(config)
+
+        for ep in config.hea_endpoints:
+            hea_id = ep.split(":")[0]
+            assert collector._last_telemetry[hea_id].reachable is False
+
+
+# ---------------------------------------------------------------------------
+# TestCollectAll (2 tests)
+# ---------------------------------------------------------------------------
+class TestCollectAll:
+    """Verify _collect_all iterates over all registered HEAs."""
+
+    @pytest.mark.asyncio
+    async def test_collect_all_calls_collect_one_for_each_registered_hea(self):
+        """_collect_all must invoke _collect_one once per entry in _last_telemetry."""
+        from unittest.mock import AsyncMock, patch
+
+        collector = _make_collector()
+        # Seed two specific HEAs
+        collector._last_telemetry.clear()
+        collector.register_hea("edge-a")
+        collector.register_hea("edge-b")
+
+        collected = []
+
+        async def fake_collect_one(hea_id):
+            collected.append(hea_id)
+            return _make_telemetry(hea_id)
+
+        with patch.object(collector, "_collect_one", side_effect=fake_collect_one):
+            await collector._collect_all()
+
+        assert sorted(collected) == ["edge-a", "edge-b"]
+
+    @pytest.mark.asyncio
+    async def test_collect_all_updates_last_telemetry(self):
+        """After _collect_all, _last_telemetry must contain fresh records for each HEA."""
+        from unittest.mock import AsyncMock, patch
+
+        collector = _make_collector()
+        collector._last_telemetry.clear()
+        collector.register_hea("edge-x")
+
+        fresh = _make_telemetry("edge-x", cpu=0.42, reachable=True)
+
+        async def fake_collect_one(hea_id):
+            return fresh
+
+        with patch.object(collector, "_collect_one", side_effect=fake_collect_one):
+            await collector._collect_all()
+
+        assert collector._last_telemetry["edge-x"].cpu_utilization == 0.42

@@ -67,7 +67,10 @@ class ScoringAlgorithm:
 
     def _compute_phi_slo(self, operator_type: str, tier_id: str, slo_ms: Optional[float]) -> float:
         if slo_ms is None:
-            slo_ms = 3600.0 * 1000  # 3600s in ms for batch operators
+            # Batch operators have no real-time SLO. Use 3,600,000 ms (1 hour)
+            # as a permissive sentinel so the SLO penalty term is effectively
+            # zero under normal operating conditions.
+            slo_ms = 3600.0 * 1000  # 3600s × 1000 ms/s = 3,600,000 ms
         observed_latency_ms = self._telemetry.get_operator_latency(operator_type) or 1.0
         if observed_latency_ms <= slo_ms:
             return 0.0

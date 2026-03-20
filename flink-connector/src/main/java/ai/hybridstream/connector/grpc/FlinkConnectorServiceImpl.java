@@ -64,8 +64,8 @@ public class FlinkConnectorServiceImpl extends FlinkConnectorGrpc.FlinkConnector
      */
     @Override
     public void restoreOperator(RestoreRequest request, StreamObserver<RestoreResponse> responseObserver) {
-        String operatorId  = request.getOperatorId();
-        String snapshotKey = request.getSnapshotObjectKey();
+        String operatorId   = request.getOperatorId();
+        String snapshotKey  = request.getObjectKey();       // proto field: object_key
         String operatorType = request.getOperatorType();
 
         log.info("RestoreOperator: id={} type={} snapshot={}", operatorId, operatorType, snapshotKey);
@@ -88,17 +88,20 @@ public class FlinkConnectorServiceImpl extends FlinkConnectorGrpc.FlinkConnector
             log.info("Restored operator {} as Flink job {}", operatorId, jobId);
 
             responseObserver.onNext(RestoreResponse.newBuilder()
-                .setOperatorId(operatorId)
-                .setJobId(jobId)
+                .setOperationId(request.getOperationId())   // echo back operation_id
+                .setFlinkJobId(jobId)                       // proto field: flink_job_id
                 .setSuccess(true)
                 .build());
 
         } catch (Exception e) {
-            log.error("Failed to restore operator {}: {}", operatorId, e.getMessage(), e);
+            // e.getMessage() can be null (e.g. NullPointerException with no message).
+            // Proto string fields must not be null — use a fallback to the class name.
+            String errMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
+            log.error("Failed to restore operator {}: {}", operatorId, errMsg, e);
             responseObserver.onNext(RestoreResponse.newBuilder()
-                .setOperatorId(operatorId)
+                .setOperationId(request.getOperationId())
                 .setSuccess(false)
-                .setErrorMsg(e.getMessage())
+                .setErrorMessage(errMsg)                    // proto field: error_message
                 .build());
         }
 
@@ -131,11 +134,12 @@ public class FlinkConnectorServiceImpl extends FlinkConnectorGrpc.FlinkConnector
                 .setSuccess(true)
                 .build());
         } catch (Exception e) {
-            log.error("Failed to terminate job {} for operator {}: {}", jobId, operatorId, e.getMessage());
+            String errMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
+            log.error("Failed to terminate job {} for operator {}: {}", jobId, operatorId, errMsg);
             responseObserver.onNext(TerminateAck.newBuilder()
                 .setOperatorId(operatorId)
                 .setSuccess(false)
-                .setErrorMsg(e.getMessage())
+                .setErrorMsg(errMsg)
                 .build());
         }
 
@@ -144,26 +148,29 @@ public class FlinkConnectorServiceImpl extends FlinkConnectorGrpc.FlinkConnector
 
     /**
      * Get status of a running Flink job for an operator.
+     * JobStatusRequest carries flink_job_id; we reverse-lookup the operator ID
+     * from our operatorJobIds map so the response can include operator_id.
      */
     @Override
     public void getJobStatus(JobStatusRequest request, StreamObserver<JobStatusResponse> responseObserver) {
-        String operatorId = request.getOperatorId();
-        String jobId = operatorJobIds.get(operatorId);
-        String status;
+        String flinkJobId = request.getFlinkJobId();    // proto field: flink_job_id
 
-        if (jobId == null) {
-            status = "NOT_FOUND";
-        } else {
-            // TODO: Query Flink REST API for actual job status
-            status = "RUNNING";  // Mock for now
-        }
+        // Reverse-lookup: find the operator ID that owns this Flink job
+        String operatorId = operatorJobIds.entrySet().stream()
+            .filter(e -> e.getValue().equals(flinkJobId))
+            .map(Map.Entry::getKey)
+            .findFirst()
+            .orElse(null);
+
+        String status = operatorId != null ? "RUNNING" : "NOT_FOUND";
+        String jobId  = operatorId != null ? flinkJobId : "";
 
         responseObserver.onNext(JobStatusResponse.newBuilder()
-            .setOperatorId(operatorId)
-            .setJobId(jobId != null ? jobId : "")
+            .setOperatorId(operatorId != null ? operatorId : "")
+            .setJobId(jobId)
             .setStatus(status)
             .build());
-        
+
         responseObserver.onCompleted();
     }
 

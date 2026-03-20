@@ -1,6 +1,7 @@
 package ai.hybridstream.connector.store;
 
 import io.minio.*;
+import io.minio.errors.ErrorResponseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,13 +80,28 @@ public class MinIOClient {
     /**
      * Check whether a snapshot object exists in MinIO.
      * Used to verify PCTR Phase 2 completed successfully.
+     *
+     * @throws RuntimeException if the check fails for any reason other than the object
+     *                          not being found (e.g. network error, auth failure).
+     *                          This prevents silently treating a MinIO outage as "snapshot
+     *                          missing" and triggering a spurious re-snapshot.
      */
     public boolean snapshotExists(String objectKey) {
         try {
             client.statObject(StatObjectArgs.builder().bucket(bucket).object(objectKey).build());
             return true;
+        } catch (ErrorResponseException e) {
+            // MinIO returns an S3-style error response. "NoSuchKey" means the object
+            // genuinely does not exist; anything else is an infrastructure error.
+            if ("NoSuchKey".equals(e.errorResponse().code())) {
+                return false;
+            }
+            throw new RuntimeException(
+                "MinIO error checking existence of snapshot '" + objectKey + "': " + e.errorResponse().code(), e);
         } catch (Exception e) {
-            return false;
+            // Network errors, auth failures, etc. — do not silently swallow these.
+            throw new RuntimeException(
+                "Failed to check existence of snapshot '" + objectKey + "' in MinIO", e);
         }
     }
 }

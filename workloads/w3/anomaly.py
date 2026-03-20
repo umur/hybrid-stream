@@ -38,7 +38,7 @@ class AnomalyDetector(BaseOperator):
         self._ewma_m2   = (1 - self._alpha) * self._ewma_m2 + self._alpha * delta ** 2
 
         std = math.sqrt(max(self._ewma_m2, 1e-12))
-        z   = abs(value - self._ewma_mean) / std if std > 0 else 0.0
+        z   = abs(value - prev_mean) / std if std > 0 else 0.0  # Use prev_mean before EWMA update
         self._recent_zscores.append(z)
 
         is_anomaly = z > self._z_threshold

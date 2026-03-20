@@ -39,7 +39,12 @@ def deserialize(data: bytes, registry: SchemaRegistry) -> dict:
         )
     schema_version = struct.unpack(">H", data[4:6])[0]
     payload = data[6:]
-    doc = msgpack.unpackb(payload, raw=False, strict_map_key=False)
+    if not payload:
+        raise ValueError("Snapshot payload is empty (truncated after header)")
+    try:
+        doc = msgpack.unpackb(payload, raw=False, strict_map_key=False)
+    except Exception as exc:
+        raise ValueError(f"Failed to unpack snapshot payload: {exc}") from exc
     operator_class = doc.get("operator_class")
     if not operator_class:
         raise ValueError("Missing operator_class in snapshot payload")

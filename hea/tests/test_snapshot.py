@@ -145,6 +145,72 @@ class TestCreateMigrationSnapshot:
         assert restored["kafka_offset_map"] == drain_offsets
 
     @pytest.mark.asyncio
+    async def test_empty_operator_state_dict_uploads_with_only_offset_map(
+        self, mock_schema_registry, mock_object_store
+    ):
+        from hea.hea.state.snapshot import create_migration_snapshot
+        from unittest.mock import patch
+
+        captured_state = {}
+
+        def mock_serialize(op_type, state, registry):
+            captured_state.update(state)
+            return b"\x48\x53\x4d\x50\x00\x01" + b"\x80"
+
+        # Build a mock operator whose get_state() returns {} (empty — no fields)
+        op = MagicMock()
+        op.operator_id = "empty-op"
+        op.operator_type = "EmptyOperator"
+        op.get_state.return_value = {}
+
+        with patch("hea.hea.state.snapshot.serialize", side_effect=mock_serialize):
+            await create_migration_snapshot(
+                operator=op,
+                schema_registry=mock_schema_registry,
+                object_store=mock_object_store,
+                migration_seq=7,
+                drain_offset_map={0: 42},
+            )
+
+        # The only key passed to serialize must be kafka_offset_map
+        assert captured_state == {"kafka_offset_map": {0: 42}}
+
+    @pytest.mark.asyncio
+    async def test_object_key_contains_operator_id_and_migration_seq(
+        self, mock_schema_registry, mock_object_store
+    ):
+        from hea.hea.state.snapshot import create_migration_snapshot
+
+        op = _make_operator(op_id="sensor-filter", op_type="FilterOperator")
+        object_key, _ = await create_migration_snapshot(
+            operator=op,
+            schema_registry=mock_schema_registry,
+            object_store=mock_object_store,
+            migration_seq=99,
+            drain_offset_map={},
+        )
+
+        assert "sensor-filter" in object_key
+        assert "99" in object_key
+
+    @pytest.mark.asyncio
+    async def test_object_key_format_is_operatorid_seq_snapshotmsgpack(
+        self, mock_schema_registry, mock_object_store
+    ):
+        from hea.hea.state.snapshot import create_migration_snapshot
+
+        op = _make_operator(op_id="my-op", op_type="FilterOperator")
+        object_key, _ = await create_migration_snapshot(
+            operator=op,
+            schema_registry=mock_schema_registry,
+            object_store=mock_object_store,
+            migration_seq=5,
+            drain_offset_map={},
+        )
+
+        assert object_key == "my-op/5/snapshot.msgpack"
+
+    @pytest.mark.asyncio
     async def test_drain_offset_embedded_in_state(self, mock_schema_registry, mock_object_store):
         from hea.hea.state.snapshot import create_migration_snapshot
         from hybridstream.common.snapshot import serialize

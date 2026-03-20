@@ -151,12 +151,12 @@ class TestCreateCustomPreset:
             create_custom_preset("bad", 0.25, 0.25, 0.25, 0.24)
 
     def test_sum_1_01_raises(self):
-        """Weights summing to 1.01 should not raise (within 0.01 tolerance)."""
+        """Weights summing to 1.01 should raise ValueError (math.isclose abs_tol=0.01 is exclusive at the boundary)."""
         from aode.aode.scoring.weights import create_custom_preset
 
-        # 0.26 + 0.25 + 0.25 + 0.25 = 1.01, within tolerance
-        preset = create_custom_preset("edge", 0.26, 0.25, 0.25, 0.25)
-        assert preset.name == "edge"
+        # 0.26 + 0.25 + 0.25 + 0.25 = 1.01; |1.01 - 1.0| = 0.01 which is NOT < abs_tol=0.01
+        with pytest.raises(ValueError):
+            create_custom_preset("edge", 0.26, 0.25, 0.25, 0.25)
 
     def test_sum_2_0_raises(self):
         """Weights summing to 2.0 should raise ValueError."""
@@ -172,6 +172,31 @@ class TestCreateCustomPreset:
         # -0.10 + 0.60 + 0.30 + 0.20 = 1.0
         preset = create_custom_preset("neg", -0.10, 0.60, 0.30, 0.20)
         assert preset.name == "neg"
+
+    def test_all_weights_equal_0_25_passes(self):
+        """Four weights of 0.25 sum exactly to 1.0 and must succeed."""
+        from aode.aode.scoring.weights import create_custom_preset
+
+        preset = create_custom_preset("equal", 0.25, 0.25, 0.25, 0.25)
+        assert preset.w_lat == 0.25
+        assert preset.w_res == 0.25
+        assert preset.w_net == 0.25
+        assert preset.w_slo == 0.25
+
+    def test_abs_tol_0_01_rejects_sum_0_98(self):
+        """Sum of 0.98 is outside abs_tol=0.01, so ValueError must be raised."""
+        from aode.aode.scoring.weights import create_custom_preset
+
+        with pytest.raises(ValueError):
+            create_custom_preset("low", 0.25, 0.25, 0.25, 0.23)  # sum = 0.98
+
+    def test_abs_tol_0_01_accepts_sum_0_995(self):
+        """Sum of 0.995 is within abs_tol=0.01 of 1.0, so no error should be raised."""
+        from aode.aode.scoring.weights import create_custom_preset
+
+        # 0.25 + 0.25 + 0.25 + 0.245 = 0.995, |0.995 - 1.0| = 0.005 < 0.01
+        preset = create_custom_preset("near-one", 0.25, 0.25, 0.25, 0.245)
+        assert preset.name == "near-one"
 
 
 # ---------------------------------------------------------------------------

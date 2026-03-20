@@ -339,3 +339,126 @@ class TestPCTROrchestrator:
         # Should not raise
         mid = await orch.migrate_operator("VehicleDetector", "edge-node-1", "cloud")
         assert isinstance(mid, str)
+
+
+# ---------------------------------------------------------------------------
+# TestPCTREdgeToEdgeMigration
+# ---------------------------------------------------------------------------
+
+class TestPCTREdgeToEdgeMigration:
+    """Verify phase-3 restore targets the HEA client when target_tier != 'cloud'."""
+
+    @pytest.mark.asyncio
+    async def test_edge_to_edge_restore_calls_target_hea_client(self):
+        """When target_tier is an edge node (not 'cloud'), phase 3 must call
+        restore_operator on the target HEA client, not on flink_client."""
+        source_hea = _mock_hea_client()
+        target_hea = _mock_hea_client()
+
+        hea_clients = {
+            "edge-node-1": source_hea,
+            "edge-node-2": target_hea,
+        }
+        flink = _mock_flink_client()
+
+        m = _make_migration(
+            hea_clients=hea_clients,
+            flink_client=flink,
+            source_tier="edge-node-1",
+            target_tier="edge-node-2",
+        )
+
+        await m.execute()
+
+        target_hea.restore_operator.assert_called_once()
+        flink.restore_operator.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_edge_to_edge_restore_passes_correct_operator_id(self):
+        """Edge-to-edge restore must pass the correct operator_id to the target HEA."""
+        source_hea = _mock_hea_client()
+        target_hea = _mock_hea_client()
+
+        hea_clients = {
+            "edge-node-1": source_hea,
+            "edge-node-2": target_hea,
+        }
+
+        m = _make_migration(
+            hea_clients=hea_clients,
+            source_tier="edge-node-1",
+            target_tier="edge-node-2",
+            operator_id="ZoneAggregator",
+        )
+
+        await m.execute()
+
+        call_kwargs = target_hea.restore_operator.call_args[1]
+        assert call_kwargs.get("operator_id") == "ZoneAggregator"
+
+
+# ---------------------------------------------------------------------------
+# TestPCTROrchestratorTimeout
+# ---------------------------------------------------------------------------
+
+class TestPCTROrchestratorTimeout:
+    """Verify the orchestrator handles migration timeouts correctly."""
+
+    @pytest.mark.asyncio
+    async def test_migration_timeout_sets_error_on_migration(self):
+        """When the migration exceeds migration_timeout_s, the error field is set."""
+        from aode.aode.config import AODEConfig
+        from aode.aode.migration.pctr import PCTROrchestrator
+
+        # Make drain block forever to trigger the timeout
+        hanging_hea = AsyncMock()
+        hanging_hea.drain_operator = AsyncMock(side_effect=asyncio.sleep(9999))
+        hanging_hea.trigger_snapshot = AsyncMock(return_value=MagicMock(
+            object_key="snap-x", byte_size=0, error_msg=""
+        ))
+        hanging_hea.terminate_operator = AsyncMock(return_value=MagicMock(
+            success=True, error_msg=""
+        ))
+
+        config = AODEConfig()
+        config.migration_timeout_s = 0  # immediate timeout
+
+        orch = PCTROrchestrator(
+            config=config,
+            hea_clients={"edge-node-1": hanging_hea, "cloud": hanging_hea},
+            flink_client=_mock_flink_client(),
+            object_store=MagicMock(),
+        )
+
+        mid = await orch.migrate_operator("VehicleDetector", "edge-node-1", "cloud")
+
+        # Allow the background task to run and timeout
+        await asyncio.sleep(0.05)
+
+        # After timeout the migration must have been removed from active list
+        assert orch.get_migration_status("VehicleDetector") is None
+
+    @pytest.mark.asyncio
+    async def test_completed_migration_removed_from_active_migrations(self):
+        """After a successful migration executes, the operator must be removed
+        from _active_migrations by _execute_migration's finally block."""
+        from aode.aode.config import AODEConfig
+        from aode.aode.migration.pctr import PCTROrchestrator
+
+        hea = _mock_hea_client()
+        config = AODEConfig()
+
+        orch = PCTROrchestrator(
+            config=config,
+            hea_clients={"edge-node-1": hea, "cloud": hea},
+            flink_client=_mock_flink_client(),
+            object_store=MagicMock(),
+        )
+
+        await orch.migrate_operator("VehicleDetector", "edge-node-1", "cloud")
+
+        # Allow the background task (_execute_migration) to complete
+        await asyncio.sleep(0.05)
+
+        # Once complete the operator must no longer appear in active migrations
+        assert orch.get_migration_status("VehicleDetector") is None

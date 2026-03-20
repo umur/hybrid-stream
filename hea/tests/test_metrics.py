@@ -86,3 +86,77 @@ class TestIngestTracking:
         from hea.hea.metrics import HEAMetrics
         m = HEAMetrics()
         assert m._ingest_counts.maxlen == 300
+
+
+class TestP95EdgeCases:
+
+    def test_p95_with_exactly_one_sample_returns_that_sample(self):
+        from hea.hea.metrics import HEAMetrics
+        m = HEAMetrics()
+        m.record_latency("op_single", 77.0)
+        p95 = m.get_operator_p95()
+        assert p95["op_single"] == 77.0
+
+    def test_p95_with_exactly_two_samples_returns_larger_value(self):
+        # With 2 samples: ceil(2 * 0.95) - 1 = ceil(1.9) - 1 = 2 - 1 = 1 → index 1 (the larger)
+        from hea.hea.metrics import HEAMetrics
+        m = HEAMetrics()
+        m.record_latency("op_two", 10.0)
+        m.record_latency("op_two", 20.0)
+        p95 = m.get_operator_p95()
+        assert p95["op_two"] == 20.0
+
+    def test_p95_with_zero_latency_sample(self):
+        from hea.hea.metrics import HEAMetrics
+        m = HEAMetrics()
+        m.record_latency("op_zero", 0.0)
+        p95 = m.get_operator_p95()
+        assert p95["op_zero"] == 0.0
+
+    def test_p95_for_unknown_operator_not_in_result(self):
+        from hea.hea.metrics import HEAMetrics
+        m = HEAMetrics()
+        m.record_latency("op_known", 5.0)
+        p95 = m.get_operator_p95()
+        assert "op_unknown" not in p95
+
+
+class TestIngestRateEdgeCases:
+
+    def test_compute_ingest_rate_with_empty_deque_returns_zero(self):
+        from hea.hea.metrics import HEAMetrics
+        m = HEAMetrics()
+        # Fresh instance — no entries recorded
+        assert m._compute_ingest_rate() == 0.0
+
+    def test_compute_ingest_rate_with_single_entry_returns_total_over_one(self):
+        from hea.hea.metrics import HEAMetrics
+        m = HEAMetrics()
+        # Single entry: window defaults to 1.0, so rate = total / 1.0
+        m.record_ingest(500)
+        rate = m._compute_ingest_rate()
+        assert rate == 500.0
+
+    def test_compute_ingest_rate_with_single_entry_of_zero_records(self):
+        from hea.hea.metrics import HEAMetrics
+        m = HEAMetrics()
+        m.record_ingest(0)
+        rate = m._compute_ingest_rate()
+        assert rate == 0.0
+
+    def test_compute_ingest_rate_two_entries_uses_time_window(self):
+        import time
+        from hea.hea.metrics import HEAMetrics
+        from unittest.mock import patch
+        m = HEAMetrics()
+        t0 = 1000.0
+        t1 = 1010.0  # 10 seconds later
+        with patch("hea.hea.metrics.time") as mock_time:
+            mock_time.monotonic.side_effect = [t0, t1, t1 + 0.001]
+            m.record_ingest(100)   # recorded at t0
+            m.record_ingest(200)   # recorded at t1
+            mock_time.monotonic.return_value = t1 + 0.001
+            rate = m._compute_ingest_rate()
+        # total=300, window = (t1+0.001) - t0 ≈ 10.001 → rate ≈ 30.0
+        assert rate > 0.0
+        assert rate < 1000.0  # sanity: not the single-entry fallback of 300/1

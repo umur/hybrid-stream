@@ -380,3 +380,54 @@ class TestPlacementOptimizerDisabled:
         )
 
         assert optimizer._config.recalibration_enabled is False
+
+
+# ---------------------------------------------------------------------------
+# TestPlacementOptimizerEdgeCases (2 tests)
+# ---------------------------------------------------------------------------
+
+class TestPlacementOptimizerEdgeCases:
+    """Verify optimizer behaviour for empty placements and tier list construction."""
+
+    @pytest.mark.asyncio
+    @patch("aode.aode.placement.optimizer.find_optimal_placement")
+    async def test_run_optimization_with_empty_placement_returns_no_operators(self, mock_fop):
+        """_run_optimization with no operators in placement returns status 'no_operators'."""
+        mock_fop.return_value = {}
+
+        opt, _, state = _make_optimizer(current_placement={})
+        state.get_available_tiers.return_value = ["cloud"]
+        state.get_slo_map.return_value = {}
+        state.get_lambda_map.return_value = {}
+
+        result = await opt._run_optimization()
+
+        assert result["status"] == "no_operators"
+        mock_fop.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("aode.aode.placement.optimizer.find_optimal_placement")
+    async def test_tiers_sourced_from_tier_capacities_not_just_occupied(self, mock_fop):
+        """_run_optimization must pass ALL tiers from get_tier_capacities to find_optimal_placement,
+        not only the tiers that happen to be occupied in the current placement."""
+        # Only OpA is placed on edge-node-1, but get_tier_capacities has 3 tiers.
+        current = {"OpA": "edge-node-1"}
+        all_caps = {"edge-node-1": 5, "edge-node-2": 5, "cloud": 100}
+        mock_fop.return_value = {"OpA": "edge-node-1"}
+
+        scores = _np_array([[0.5, 0.5, 0.5]])
+        opt, _, state = _make_optimizer(
+            current_placement=current,
+            scores_array=scores,
+        )
+        state.get_available_tiers.return_value = list(all_caps.keys())
+        state.get_tier_capacities.return_value = all_caps
+        state.get_slo_map.return_value = {"OpA": 2000.0}
+        state.get_lambda_map.return_value = {"OpA": "standard"}
+
+        await opt._run_optimization()
+
+        # find_optimal_placement must have been called with all 3 tiers from tier_capacities
+        call_args = mock_fop.call_args
+        tiers_arg = call_args[0][2]  # positional arg index 2 = tiers list
+        assert set(tiers_arg) == {"edge-node-1", "edge-node-2", "cloud"}

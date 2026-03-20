@@ -28,12 +28,30 @@ class TelemetryCollector:
         self._last_telemetry: Dict[str, HEATelemetry] = {}
         self._collection_task: Optional[asyncio.Task] = None
 
+        for hea_endpoint in config.hea_endpoints:
+            hea_id = hea_endpoint.split(":")[0]
+            self.register_hea(hea_id)
+
     async def start(self) -> None:
         self._collection_task = asyncio.create_task(self._collection_loop())
 
     async def stop(self) -> None:
         if self._collection_task:
             self._collection_task.cancel()
+
+    def register_hea(self, hea_id: str) -> None:
+        """Register an HEA node for telemetry collection."""
+        if hea_id not in self._last_telemetry:
+            self._last_telemetry[hea_id] = HEATelemetry(
+                hea_id=hea_id,
+                cpu_utilization=0.0,
+                memory_utilization=0.0,
+                rtt_ms=1000.0,
+                ingest_rate_eps=0.0,
+                operator_p95_ms={},
+                timestamp_ms=0,
+                reachable=False,
+            )
 
     def get_latest_telemetry(self) -> Dict[str, HEATelemetry]:
         return dict(self._last_telemetry)
