@@ -281,8 +281,8 @@ HybridStream is structured as four loosely coupled components that interact thro
 
 \begin{figure}[htbp]
 \centering
-\fbox{\parbox{0.85\textwidth}{\centering\vspace{2.5cm}\textit{Architecture diagram placeholder}\vspace{2.5cm}}}
-\caption{HybridStream system architecture. Solid arrows: data flow. Dashed arrows: AODE telemetry and control. The ingestion layer (Kafka) decouples producers from both processing tiers.}
+\includegraphics[width=0.95\textwidth]{figures/architecture.pdf}
+\caption{HybridStream system architecture. Solid arrows: data flow. Dashed arrows: AODE telemetry and control. The ingestion layer (Kafka) decouples producers from both processing tiers; inter-tier data exchange is routed through dedicated Kafka bridge topics.}
 \label{fig:architecture}
 \end{figure}
 

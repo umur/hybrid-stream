@@ -1,0 +1,132 @@
+\documentclass[border=5pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc, decorations.pathreplacing}
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+\definecolor{edgeblue}{HTML}{2196F3}
+\definecolor{cloudpurple}{HTML}{7B1FA2}
+\definecolor{aodeorange}{HTML}{E65100}
+\definecolor{kafkagreen}{HTML}{2E7D32}
+\definecolor{sourcegray}{HTML}{616161}
+\definecolor{lightedge}{HTML}{E3F2FD}
+\definecolor{lightcloud}{HTML}{F3E5F5}
+\definecolor{lightaode}{HTML}{FFF3E0}
+\definecolor{lightkafka}{HTML}{E8F5E9}
+
+\begin{document}
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.8cm,
+    >={Stealth[length=6pt]},
+    box/.style={draw, rounded corners=3pt, minimum width=2.2cm, minimum height=0.9cm, align=center, font=\small\bfseries},
+    smallbox/.style={draw, rounded corners=2pt, minimum width=1.6cm, minimum height=0.65cm, align=center, font=\scriptsize},
+    groupbox/.style={draw, dashed, rounded corners=6pt, inner sep=10pt},
+    datalabel/.style={font=\tiny, text=black!70, align=center},
+    every edge/.style={thick},
+]
+
+% === DATA SOURCES (leftmost) ===
+\node[box, fill=sourcegray!15, draw=sourcegray] (iot) {IoT Sensors};
+\node[box, fill=sourcegray!15, draw=sourcegray, below=0.6cm of iot] (city) {Smart City\\[-1pt]\scriptsize Feeds};
+\node[box, fill=sourcegray!15, draw=sourcegray, below=0.6cm of city] (fin) {Financial\\[-1pt]\scriptsize Markets};
+
+\node[above=0.3cm of iot, font=\small\bfseries, text=sourcegray] {Data Sources};
+
+% === KAFKA INGESTION LAYER ===
+\node[box, fill=lightkafka, draw=kafkagreen, right=2.0cm of city, minimum height=3.8cm, minimum width=1.8cm] (kafka) {\textbf{Kafka}\\[2pt]\scriptsize Ingestion\\[-1pt]\scriptsize Layer\\[4pt]\scriptsize\textit{KRaft}};
+
+\node[above=0.3cm of kafka.north, font=\small\bfseries, text=kafkagreen] {Message Bus};
+
+% === EDGE TIER ===
+\node[smallbox, fill=lightedge, draw=edgeblue, right=2.5cm of kafka, yshift=1.2cm] (hea1) {\textbf{HEA-1}\\[-2pt]\tiny Python 3.12};
+\node[smallbox, fill=lightedge, draw=edgeblue, right=0.4cm of hea1] (hea2) {\textbf{HEA-2}\\[-2pt]\tiny Python 3.12};
+\node[smallbox, fill=lightedge, draw=edgeblue, below=0.3cm of hea1] (hea3) {\textbf{HEA-3}\\[-2pt]\tiny Python 3.12};
+\node[smallbox, fill=lightedge, draw=edgeblue, right=0.4cm of hea3] (hea4) {\textbf{HEA-4}\\[-2pt]\tiny Python 3.12};
+
+% Edge operator boxes inside HEAs
+\node[draw=edgeblue!50, fill=edgeblue!10, rounded corners=1pt, minimum width=1.3cm, minimum height=0.3cm, font=\tiny, below=0.15cm of hea1.south] (op1) {$o_1$: Filter};
+\node[draw=edgeblue!50, fill=edgeblue!10, rounded corners=1pt, minimum width=1.3cm, minimum height=0.3cm, font=\tiny, below=0.15cm of hea3.south] (op2) {$o_3$: Classify};
+
+% Edge group
+\begin{scope}[on background layer]
+\node[groupbox, draw=edgeblue, fill=lightedge!30, fit=(hea1)(hea2)(hea3)(hea4)(op1)(op2), inner sep=12pt] (edgebox) {};
+\end{scope}
+\node[above=0.15cm of edgebox.north, font=\small\bfseries, text=edgeblue] {Edge Tier};
+\node[below=0.05cm of edgebox.south, font=\tiny, text=edgeblue!70] {55.2 MB per node};
+
+% === CLOUD TIER ===
+\node[smallbox, fill=lightcloud, draw=cloudpurple, below=1.8cm of hea3, xshift=0.5cm] (jm) {\textbf{Flink JM}\\[-2pt]\tiny JobManager};
+\node[smallbox, fill=lightcloud, draw=cloudpurple, right=0.5cm of jm] (tm1) {\textbf{Flink TM}\\[-2pt]\tiny TaskMgr 1};
+\node[smallbox, fill=lightcloud, draw=cloudpurple, below=0.3cm of jm] (conn) {\textbf{Connector}\\[-2pt]\tiny gRPC Bridge};
+\node[smallbox, fill=lightcloud, draw=cloudpurple, right=0.5cm of conn] (tm2) {\textbf{Flink TM}\\[-2pt]\tiny TaskMgr 2};
+
+% Cloud group
+\begin{scope}[on background layer]
+\node[groupbox, draw=cloudpurple, fill=lightcloud!30, fit=(jm)(tm1)(conn)(tm2), inner sep=12pt] (cloudbox) {};
+\end{scope}
+\node[above=0.15cm of cloudbox.north, font=\small\bfseries, text=cloudpurple] {Cloud Tier};
+\node[below=0.05cm of cloudbox.south, font=\tiny, text=cloudpurple!70] {Apache Flink 1.18};
+
+% === AODE ===
+\node[box, fill=lightaode, draw=aodeorange, minimum width=2.8cm, minimum height=1.8cm, right=2.2cm of edgebox.east, yshift=-1.5cm] (aode) {};
+\node[font=\small\bfseries, text=aodeorange] at (aode.north) [below=3pt] {AODE};
+\node[smallbox, draw=aodeorange!60, fill=aodeorange!10, minimum width=2.2cm] at ($(aode.center)+(0,0.05)$) (scoring) {\tiny Scoring Model\\[-2pt]\tiny $\Phi(o_i, \theta)$};
+\node[font=\tiny, text=aodeorange!80] at ($(aode.south)+(0,0.25)$) {Recalibration};
+
+% === COORDINATION ===
+\node[smallbox, fill=gray!10, draw=gray, below=0.8cm of cloudbox, xshift=-0.5cm] (etcd) {\textbf{etcd}\\[-2pt]\tiny Coordination};
+\node[smallbox, fill=gray!10, draw=gray, right=0.8cm of etcd] (minio) {\textbf{MinIO}\\[-2pt]\tiny State Store};
+
+% === DATA FLOW ARROWS (solid) ===
+% Sources to Kafka
+\draw[->, thick, color=sourcegray] (iot.east) -- (kafka.west |- iot.east);
+\draw[->, thick, color=sourcegray] (city.east) -- (kafka.west);
+\draw[->, thick, color=sourcegray] (fin.east) -- (kafka.west |- fin.east);
+
+% Kafka to Edge
+\draw[->, thick, color=kafkagreen] (kafka.east |- hea1.west) -- node[datalabel, above] {\tiny events} (hea1.west |- kafka.east |- hea1.west);
+\draw[->, thick, color=kafkagreen] ([yshift=-3pt]kafka.east) -- node[datalabel, below] {\tiny events} ([yshift=-3pt]hea3.west -| kafka.east) -- ([yshift=-3pt]hea3.west);
+
+% Kafka to Cloud (bridge topics)
+\draw[->, thick, color=kafkagreen] ([yshift=-10pt]kafka.east) |- node[datalabel, below left, pos=0.7] {\tiny bridge} (conn.west);
+
+% Edge to Kafka (results back)
+\draw[->, thick, color=edgeblue!70, dashed] ([yshift=3pt]hea2.east) -- ++(0.3,0) |- ([yshift=5pt]kafka.east);
+
+% Cloud results
+\draw[->, thick, color=cloudpurple!70] (tm1.east) -- ++(0.3,0);
+\draw[->, thick, color=cloudpurple!70] (tm2.east) -- ++(0.3,0);
+
+% === AODE TELEMETRY & CONTROL (dashed) ===
+% AODE <-> Edge (telemetry + placement)
+\draw[<->, thick, dashed, color=aodeorange] (aode.north) |- node[datalabel, above, pos=0.75] {\tiny telemetry / placement} (edgebox.east);
+
+% AODE <-> Cloud Connector
+\draw[<->, thick, dashed, color=aodeorange] (aode.south west) |- node[datalabel, below, pos=0.6] {\tiny directives} (conn.east);
+
+% AODE -> etcd
+\draw[->, thick, dashed, color=gray!70] (aode.south) |- (etcd.east);
+
+% Edge -> MinIO (state snapshots)
+\draw[->, thick, dotted, color=gray!60] (edgebox.south east) |- node[datalabel, right, pos=0.3] {\tiny snapshots} (minio.north);
+
+% Cloud -> MinIO
+\draw[->, thick, dotted, color=gray!60] (cloudbox.south east) -- (minio.north west);
+
+% === LEGEND ===
+\node[font=\scriptsize, anchor=north west] at (-0.5, -7.5) (leg) {
+\begin{tikzpicture}[node distance=0.4cm]
+    \draw[->, thick] (0,0) -- (1,0) node[right, font=\scriptsize] {Data flow};
+    \draw[<->, thick, dashed, color=aodeorange] (0,-0.5) -- (1,-0.5) node[right, font=\scriptsize, text=black] {Telemetry / control};
+    \draw[->, thick, dotted, color=gray!60] (0,-1.0) -- (1,-1.0) node[right, font=\scriptsize, text=black] {State snapshots};
+\end{tikzpicture}
+};
+
+% === MIGRATION ANNOTATION ===
+\draw[<->, very thick, color=aodeorange!80, decorate, decoration={brace, amplitude=6pt, mirror}] 
+    (edgebox.south west) -- (cloudbox.north west) 
+    node[midway, left=8pt, font=\tiny, text=aodeorange, align=center] {PCTR\\Migration};
+
+\end{tikzpicture}
+\end{document}
