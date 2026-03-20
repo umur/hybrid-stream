@@ -1,0 +1,9 @@
+{
+  "operator_type": "VehicleDetector",
+  "schema_version": 1,
+  "fields": {
+    "detection_count": "int",
+    "last_speed": "float",
+    "is_active": "boolean"
+  }
+}

@@ -1,0 +1,5 @@
+ai/hybridstream/connector/snapshot/SnapshotDeserializerTest.class
+ai/hybridstream/connector/grpc/FlinkConnectorServiceImplTest.class
+ai/hybridstream/connector/config/ConnectorConfigTest.class
+ai/hybridstream/connector/operator/OperatorFactoryTest.class
+ai/hybridstream/connector/snapshot/SchemaRegistryTest.class

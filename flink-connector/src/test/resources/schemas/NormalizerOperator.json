@@ -1,0 +1,9 @@
+{
+  "operator_type": "NormalizerOperator",
+  "schema_version": 1,
+  "fields": {
+    "mean": "float",
+    "std": "float",
+    "sample_count": "int"
+  }
+}
