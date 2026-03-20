@@ -55,3 +55,65 @@ def save_comparison_table(results: list[ComparisonResult]) -> Path:
     out_path.write_text(latex)
     log.info("Saved LaTeX table: %s", out_path)
     return out_path
+
+
+def generate_summary_table(df) -> Path:
+    """Generate a summary table with median M1–M6 per config."""
+    import pandas as pd
+
+    rows = []
+    for workload in ["W1", "W2", "W3"]:
+        for network in ["N1", "N2", "N3"]:
+            for system in ["HybridStream", "B1", "B2"]:
+                mask = (df["workload"] == workload) & (df["network"] == network) & (df["system"] == system)
+                subset = df[mask]
+                if len(subset) == 0:
+                    continue
+                rows.append({
+                    "Workload": workload, "Network": network, "System": system,
+                    "M1 p95 (ms)": f"{subset['m1_p95_latency_ms'].median():.1f}",
+                    "M2 SLO (%)": f"{subset['m2_slo_compliance'].mean()*100:.1f}",
+                    "M3 Throughput (k)": f"{subset['m3_throughput_eps'].median()/1000:.1f}",
+                    "M4 Pause (ms)": f"{subset['m4_migration_pause_ms'][subset['m4_migration_pause_ms']>0].median():.0f}" if (subset['m4_migration_pause_ms']>0).any() else "—",
+                    "M5 AODE (ms)": f"{subset['m5_aode_overhead_ms'].mean():.1f}",
+                    "M6 Edge Util": f"{subset['m6_edge_utilization'].mean():.2f}",
+                })
+
+    summary = pd.DataFrame(rows)
+    out_path = TABLES_DIR / "summary_table.csv"
+    summary.to_csv(out_path, index=False)
+
+    # Also generate LaTeX
+    latex_lines = [
+        r"\begin{table*}[htbp]",
+        r"\centering",
+        r"\caption{Median metrics across all experimental configurations (10 repetitions each).}",
+        r"\label{tab:summary_results}",
+        r"\small",
+        r"\begin{tabular}{lll|rrrrrr}",
+        r"\toprule",
+        r"W & Net & System & M1 p95 (ms) & M2 SLO (\%) & M3 (k ev/s) & M4 Pause (ms) & M5 AODE (ms) & M6 Edge \\",
+        r"\midrule",
+    ]
+    for _, row in summary.iterrows():
+        line = f"{row['Workload']} & {row['Network']} & {row['System']} & "
+        line += f"{row['M1 p95 (ms)']} & {row['M2 SLO (%)']} & {row['M3 Throughput (k)']} & "
+        line += f"{row['M4 Pause (ms)']} & {row['M5 AODE (ms)']} & {row['M6 Edge Util']}"
+        latex_lines.append(line + r" \\")
+    latex_lines += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
+
+    tex_path = TABLES_DIR / "summary_table.tex"
+    tex_path.write_text("\n".join(latex_lines))
+    log.info("Saved summary table: %s", out_path)
+    return out_path
+
+
+def generate_all_tables(df) -> list:
+    """Generate all publication tables."""
+    from .stats import run_all_pairwise_comparisons
+    comparisons = run_all_pairwise_comparisons(df)
+    paths = [
+        save_comparison_table(comparisons),
+        generate_summary_table(df),
+    ]
+    return paths

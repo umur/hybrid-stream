@@ -61,7 +61,7 @@ def load_all_results() -> pd.DataFrame:
     combined["workload"] = parsed[0]
     combined["system"]   = parsed[1]
     combined["network"]  = parsed[2]
-    combined = combined[combined["timestamp_s"] >= 600].copy()
+    combined = combined[combined["timestamp_s"] >= 120].copy()  # Skip warmup period (120s)
 
     log.info("Loaded %d rows from %d result files", len(combined), len(all_dfs))
     return combined
