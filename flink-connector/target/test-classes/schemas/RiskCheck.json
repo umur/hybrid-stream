@@ -1,9 +1,0 @@
-{
-  "operator_type": "RiskCheck",
-  "schema_version": 1,
-  "fields": {
-    "risk_limit": "float",
-    "last_exposure": "float",
-    "violation_count": "int"
-  }
-}

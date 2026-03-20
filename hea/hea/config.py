@@ -10,18 +10,18 @@ class HEAConfig(BaseSettings):
     grpc_port:              int   = Field(50051,                  validation_alias=AliasChoices("HEA_GRPC_PORT", "grpc_port"))
 
     # Kafka
-    kafka_bootstrap:        str   = Field("localhost:9092",       validation_alias=AliasChoices("HEA_KAFKA_BOOTSTRAP", "kafka_bootstrap"))
+    kafka_bootstrap:        str   = Field("kafka:9092",           validation_alias=AliasChoices("HEA_KAFKA_BOOTSTRAP", "kafka_bootstrap"))
     kafka_batch_size:       int   = Field(500,                    validation_alias=AliasChoices("HEA_KAFKA_BATCH_SIZE", "kafka_batch_size"))
     kafka_group_prefix:     str   = Field("hea",                  validation_alias=AliasChoices("HEA_KAFKA_GROUP_PREFIX", "kafka_group_prefix"))
 
     # Object store
-    minio_endpoint:         str   = Field("http://localhost:9000", validation_alias=AliasChoices("HEA_MINIO_ENDPOINT", "minio_endpoint"))
+    minio_endpoint:         str   = Field("http://minio:9000",    validation_alias=AliasChoices("HEA_MINIO_ENDPOINT", "minio_endpoint"))
     minio_access_key:       str   = Field("hybridstream",         validation_alias=AliasChoices("HEA_MINIO_ACCESS_KEY", "minio_access_key"))
     minio_secret_key:       str   = Field("hybridstream123",      validation_alias=AliasChoices("HEA_MINIO_SECRET_KEY", "minio_secret_key"))
     minio_bucket:           str   = Field("hybridstream-snapshots", validation_alias=AliasChoices("HEA_MINIO_BUCKET", "minio_bucket"))
 
     # etcd
-    etcd_endpoints:         list[str] = Field(["localhost:2379"], validation_alias=AliasChoices("HEA_ETCD_ENDPOINTS", "etcd_endpoints"))
+    etcd_endpoints:         list[str] = Field(["http://etcd:2379"], validation_alias=AliasChoices("HEA_ETCD_ENDPOINTS", "etcd_endpoints"))
 
     # State
     rocksdb_path:           str   = Field("/data/rocksdb",        validation_alias=AliasChoices("HEA_ROCKSDB_PATH", "rocksdb_path"))

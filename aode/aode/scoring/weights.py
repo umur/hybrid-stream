@@ -32,3 +32,19 @@ def get_weight_preset(name: str) -> WeightPreset:
 
 def create_custom_preset(name: str, w_lat: float, w_res: float, w_net: float, w_slo: float) -> WeightPreset:
     return WeightPreset(name=name, w_lat=w_lat, w_res=w_res, w_net=w_net, w_slo=w_slo)
+
+
+class WeightConfig(WeightPreset):
+    """Wrapper class for WeightPreset with a from_preset class method"""
+    
+    @classmethod
+    def from_preset(cls, preset_name: str) -> 'WeightConfig':
+        """Create a WeightConfig from a preset name"""
+        preset = get_weight_preset(preset_name)
+        return cls(
+            name=preset.name,
+            w_lat=preset.w_lat,
+            w_res=preset.w_res,
+            w_net=preset.w_net,
+            w_slo=preset.w_slo,
+        )

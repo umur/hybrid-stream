@@ -1,4 +1,14 @@
 __pycache__/
 *.pyc
+*.egg-info/
+build/
+dist/
 .omc/
 firebase-debug.log
+
+# Java build artifacts
+flink-connector/target/
+
+# Generated stubs (regenerated during Docker build)
+stubs-final/
+proto/generated/

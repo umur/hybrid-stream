@@ -88,11 +88,11 @@ class TelemetryCollector:
                 hea_id=hea_id,
                 cpu_utilization=response.cpu_utilization,
                 memory_utilization=response.memory_utilization,
-                rtt_ms=response.rtt_ms,
+                rtt_ms=collection_latency_ms,  # Use actual measured RTT
                 ingest_rate_eps=response.ingest_rate_eps,
                 operator_p95_ms=dict(response.operator_p95_ms),
-                timestamp_ms=int(time.time() * 1000),
-                reachable=True,
+                timestamp_ms=response.timestamp_ms,  # Use HEA's timestamp
+                reachable=response.reachable,
                 collection_latency_ms=collection_latency_ms,
             )
         except Exception as e:

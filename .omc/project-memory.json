@@ -31,27 +31,123 @@
   "directoryMap": {},
   "hotPaths": [
     {
+      "path": "aode/aode/placement/state.py",
+      "accessCount": 8,
+      "lastAccessed": 1774015379048,
+      "type": "file"
+    },
+    {
       "path": "hybridstream-common/hybridstream/common/snapshot.py",
-      "accessCount": 3,
-      "lastAccessed": 1773946846537,
-      "type": "file"
-    },
-    {
-      "path": "hybridstream-common/tests/test_dag_model.py",
-      "accessCount": 3,
-      "lastAccessed": 1773946867575,
-      "type": "file"
-    },
-    {
-      "path": "hybridstream-common/tests/test_snapshot.py",
-      "accessCount": 3,
-      "lastAccessed": 1773946894610,
+      "accessCount": 8,
+      "lastAccessed": 1774015396177,
       "type": "file"
     },
     {
       "path": "hybridstream-common/hybridstream/common/object_store.py",
+      "accessCount": 8,
+      "lastAccessed": 1774015396525,
+      "type": "file"
+    },
+    {
+      "path": "hea/hea/metrics.py",
+      "accessCount": 7,
+      "lastAccessed": 1774015380281,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/telemetry/collector.py",
+      "accessCount": 7,
+      "lastAccessed": 1774015384200,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/scoring/algorithm.py",
+      "accessCount": 6,
+      "lastAccessed": 1774015378246,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/scoring/weights.py",
+      "accessCount": 6,
+      "lastAccessed": 1774015378617,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/placement/optimizer.py",
+      "accessCount": 6,
+      "lastAccessed": 1774015383746,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/migration/pctr.py",
+      "accessCount": 6,
+      "lastAccessed": 1774015383988,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_snapshot.py",
+      "accessCount": 6,
+      "lastAccessed": 1774015509798,
+      "type": "file"
+    },
+    {
+      "path": "proto/hybridstream.proto",
+      "accessCount": 5,
+      "lastAccessed": 1774015750583,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_dag_model.py",
+      "accessCount": 4,
+      "lastAccessed": 1774014839719,
+      "type": "file"
+    },
+    {
+      "path": "infra/docker-compose.yml",
+      "accessCount": 4,
+      "lastAccessed": 1774015107440,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_object_store.py",
+      "accessCount": 4,
+      "lastAccessed": 1774015525541,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/tests/test_schema_registry.py",
+      "accessCount": 3,
+      "lastAccessed": 1774015389394,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/config.py",
+      "accessCount": 3,
+      "lastAccessed": 1774015396447,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/hybridstream/common/dag_model.py",
       "accessCount": 2,
-      "lastAccessed": 1773946833044,
+      "lastAccessed": 1774014835633,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/hybridstream/common/schema_registry.py",
+      "accessCount": 2,
+      "lastAccessed": 1774014836420,
+      "type": "file"
+    },
+    {
+      "path": "hybridstream-common/pyproject.toml",
+      "accessCount": 2,
+      "lastAccessed": 1774014839275,
+      "type": "file"
+    },
+    {
+      "path": "aode/pyproject.toml",
+      "accessCount": 2,
+      "lastAccessed": 1774015584159,
       "type": "file"
     },
     {
@@ -67,21 +163,9 @@
       "type": "file"
     },
     {
-      "path": "proto/hybridstream.proto",
-      "accessCount": 1,
-      "lastAccessed": 1773945660526,
-      "type": "file"
-    },
-    {
       "path": "scripts/generate_proto.sh",
       "accessCount": 1,
       "lastAccessed": 1773945666658,
-      "type": "file"
-    },
-    {
-      "path": "infra/docker-compose.yml",
-      "accessCount": 1,
-      "lastAccessed": 1773945679984,
       "type": "file"
     },
     {
@@ -169,24 +253,6 @@
       "type": "file"
     },
     {
-      "path": "hybridstream-common/pyproject.toml",
-      "accessCount": 1,
-      "lastAccessed": 1773945730015,
-      "type": "file"
-    },
-    {
-      "path": "hybridstream-common/hybridstream/common/dag_model.py",
-      "accessCount": 1,
-      "lastAccessed": 1773945741314,
-      "type": "file"
-    },
-    {
-      "path": "hybridstream-common/hybridstream/common/schema_registry.py",
-      "accessCount": 1,
-      "lastAccessed": 1773945748997,
-      "type": "file"
-    },
-    {
       "path": "hea/hea/__init__.py",
       "accessCount": 1,
       "lastAccessed": 1773945775853,
@@ -229,15 +295,39 @@
       "type": "file"
     },
     {
-      "path": "hybridstream-common/tests/test_schema_registry.py",
+      "path": "aode/aode/main.py",
       "accessCount": 1,
-      "lastAccessed": 1773946906031,
+      "lastAccessed": 1774014793159,
       "type": "file"
     },
     {
-      "path": "hybridstream-common/tests/test_object_store.py",
+      "path": "aode/aode/etcd/client.py",
       "accessCount": 1,
-      "lastAccessed": 1773946923922,
+      "lastAccessed": 1774014795019,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/grpc/clients.py",
+      "accessCount": 1,
+      "lastAccessed": 1774014795390,
+      "type": "file"
+    },
+    {
+      "path": "aode/aode/grpc/server.py",
+      "accessCount": 1,
+      "lastAccessed": 1774014795549,
+      "type": "file"
+    },
+    {
+      "path": "hea/hea/main.py",
+      "accessCount": 1,
+      "lastAccessed": 1774014798038,
+      "type": "file"
+    },
+    {
+      "path": "hea/hea/config.py",
+      "accessCount": 1,
+      "lastAccessed": 1774014798220,
       "type": "file"
     }
   ],

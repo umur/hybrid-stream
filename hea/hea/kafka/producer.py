@@ -10,7 +10,7 @@ class BridgeProducer:
     async def start(self) -> None:
         self._producer = AIOKafkaProducer(
             bootstrap_servers=self._bootstrap,
-            compression_type="lz4",
+            compression_type="gzip",
             acks="all",
         )
         await self._producer.start()

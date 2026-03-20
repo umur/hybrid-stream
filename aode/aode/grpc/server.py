@@ -3,12 +3,8 @@ import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-pb2 = sys.modules.get("hybridstream.proto.hybridstream_pb2") or __import__(
-    "hybridstream.proto.hybridstream_pb2", fromlist=["hybridstream_pb2"]
-)
-pb2_grpc = sys.modules.get("hybridstream.proto.hybridstream_pb2_grpc") or __import__(
-    "hybridstream.proto.hybridstream_pb2_grpc", fromlist=["hybridstream_pb2_grpc"]
-)
+from . import hybridstream_pb2 as pb2
+from . import hybridstream_pb2_grpc as pb2_grpc
 
 log = logging.getLogger(__name__)
 

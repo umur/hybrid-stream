@@ -1,32 +1,35 @@
-version: "3.9"
+# HybridStream — Full Stack
+# Usage: docker compose -f docker-compose.full.yml up --build
+# No host environment variables required. Just run it.
 
 services:
-  # Infrastructure
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
   etcd:
-    image: quay.io/coreos/etcd:v3.5.12
+    image: quay.io/coreos/etcd:v3.5.9
     ports:
       - "2379:2379"
-      - "2380:2380"
-    environment:
-      ETCD_NAME: etcd0
-      ETCD_DATA_DIR: /etcd-data
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
-      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
-      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd:2380
-      ETCD_INITIAL_CLUSTER: "etcd0=http://etcd:2380"
-      ETCD_INITIAL_CLUSTER_TOKEN: hybridstream-cluster
-      ETCD_INITIAL_CLUSTER_STATE: new
+    command:
+      - etcd
+      - --name=etcd0
+      - --data-dir=/etcd-data
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd:2379
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --initial-advertise-peer-urls=http://etcd:2380
+      - --initial-cluster=etcd0=http://etcd:2380
     volumes:
       - etcd_data:/etcd-data
     healthcheck:
-      test: ["CMD", "etcdctl", "--endpoints=http://localhost:2379", "endpoint", "health"]
+      test: ["CMD", "/usr/local/bin/etcdctl", "--endpoints=http://localhost:2379", "endpoint", "health"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 5s
 
   kafka:
-    image: apache/kafka:3.6.1
+    image: confluentinc/cp-kafka:7.6.0
     ports:
       - "9092:9092"
     environment:
@@ -34,23 +37,27 @@ services:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: Mb8Y289SQ32bUBCXCVHWJA
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1"]
       interval: 15s
       timeout: 10s
-      retries: 5
-    depends_on:
-      etcd:
-        condition: service_healthy
+      retries: 10
+      start_period: 30s
 
   minio:
-    image: minio/minio:RELEASE.2024-01-01T00-00-00Z
+    image: minio/minio:latest
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -64,90 +71,74 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
 
-  # Init containers
+  # ── Init containers (run once, then exit) ───────────────────────────────────
+
   minio-init:
-    image: minio/mc:RELEASE.2024-01-01T00-00-00Z
+    image: minio/mc:latest
     depends_on:
       minio:
         condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set myminio http://minio:9000 hybridstream hybridstream123;
-      mc mb myminio/hybridstream-snapshots;
-      mc policy set public myminio/hybridstream-snapshots;
-      echo 'MinIO bucket created successfully'
-      "
+    entrypoint: /bin/sh -c "mc alias set hs http://minio:9000 hybridstream hybridstream123 && mc mb --ignore-existing hs/hybridstream-snapshots && echo 'MinIO ready'"
+    restart: on-failure
 
   kafka-init:
-    image: apache/kafka:3.6.1
+    image: confluentinc/cp-kafka:7.6.0
     depends_on:
       kafka:
         condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      echo 'Creating Kafka topics...';
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w1-raw-zone-north --partitions 4 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w1-raw-zone-south --partitions 4 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w1-raw-zone-east --partitions 4 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w1-raw-zone-west --partitions 4 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w1-features --partitions 2 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w1-classified --partitions 2 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w2-sensors --partitions 8 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w2-zones --partitions 4 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w2-incidents --partitions 2 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w3-trades --partitions 16 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w3-risks --partitions 8 --replication-factor 1;
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic w3-output --partitions 4 --replication-factor 1;
-      echo 'Kafka topics created successfully'
-      "
+    entrypoint: /bin/sh -c "for t in w1-raw-zone-north w1-raw-zone-south w1-raw-zone-east w1-raw-zone-west w1-features w1-classified w2-sensors w2-zones w2-incidents w3-trades w3-risks w3-output; do kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic $$t --partitions 4 --replication-factor 1; done && echo 'Kafka ready'"
+    restart: on-failure
 
-  # Flink cluster
+  # ── Flink cluster ───────────────────────────────────────────────────────────
+
   flink-jobmanager:
-    image: flink:1.18.1-java11
+    image: flink:1.18.1-scala_2.12-java11
     ports:
       - "8081:8081"
     command: jobmanager
     environment:
-      - FLINK_PROPERTIES=jobmanager.rpc.address=flink-jobmanager
-      - JVM_ARGS=-Xmx2g -Xms1g
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        rest.bind-port: 8081
+        parallelism.default: 4
     volumes:
-      - flink_data:/tmp
+      - flink_data:/opt/flink/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/jobmanager/config"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/overview"]
       interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 20s
     depends_on:
       kafka-init:
         condition: service_completed_successfully
 
   flink-taskmanager-1:
-    image: flink:1.18.1-java11
+    image: flink:1.18.1-scala_2.12-java11
     command: taskmanager
     environment:
-      - FLINK_PROPERTIES=jobmanager.rpc.address=flink-jobmanager|taskmanager.numberOfTaskSlots=4
-      - JVM_ARGS=-Xmx3g -Xms2g
-    volumes:
-      - flink_data:/tmp
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
     depends_on:
       flink-jobmanager:
-        condition: service_healthy
+        condition: service_started
 
   flink-taskmanager-2:
-    image: flink:1.18.1-java11
+    image: flink:1.18.1-scala_2.12-java11
     command: taskmanager
     environment:
-      - FLINK_PROPERTIES=jobmanager.rpc.address=flink-jobmanager|taskmanager.numberOfTaskSlots=4
-      - JVM_ARGS=-Xmx3g -Xms2g
-    volumes:
-      - flink_data:/tmp
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
     depends_on:
       flink-jobmanager:
-        condition: service_healthy
+        condition: service_started
 
-  # HybridStream components
+  # ── HEA nodes (all defaults baked into config.py) ──────────────────────────
+
   hea-node-1:
     build:
       context: ..
@@ -155,27 +146,22 @@ services:
     ports:
       - "50051:50051"
     environment:
-      KAFKA_BOOTSTRAP: kafka:9092
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: hybridstream
-      MINIO_SECRET_KEY: hybridstream123
-      MINIO_BUCKET: hybridstream-snapshots
-      ETCD_ENDPOINTS: http://etcd:2379
-      AODE_ENDPOINT: aode:50055
       HEA_NODE_ID: hea-node-1
-      HEA_PORT: 50051
     volumes:
       - hea_data_1:/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import grpc; grpc.channel_ready_future(grpc.insecure_channel('localhost:50051')).result(timeout=5)"]
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',50051),3); s.close()"]
       interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 20s
     depends_on:
       minio-init:
         condition: service_completed_successfully
       kafka-init:
         condition: service_completed_successfully
+      etcd:
+        condition: service_healthy
 
   hea-node-2:
     build:
@@ -184,27 +170,22 @@ services:
     ports:
       - "50052:50051"
     environment:
-      KAFKA_BOOTSTRAP: kafka:9092
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: hybridstream
-      MINIO_SECRET_KEY: hybridstream123
-      MINIO_BUCKET: hybridstream-snapshots
-      ETCD_ENDPOINTS: http://etcd:2379
-      AODE_ENDPOINT: aode:50055
       HEA_NODE_ID: hea-node-2
-      HEA_PORT: 50051
     volumes:
       - hea_data_2:/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import grpc; grpc.channel_ready_future(grpc.insecure_channel('localhost:50051')).result(timeout=5)"]
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',50051),3); s.close()"]
       interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 20s
     depends_on:
       minio-init:
         condition: service_completed_successfully
       kafka-init:
         condition: service_completed_successfully
+      etcd:
+        condition: service_healthy
 
   hea-node-3:
     build:
@@ -213,27 +194,22 @@ services:
     ports:
       - "50053:50051"
     environment:
-      KAFKA_BOOTSTRAP: kafka:9092
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: hybridstream
-      MINIO_SECRET_KEY: hybridstream123
-      MINIO_BUCKET: hybridstream-snapshots
-      ETCD_ENDPOINTS: http://etcd:2379
-      AODE_ENDPOINT: aode:50055
       HEA_NODE_ID: hea-node-3
-      HEA_PORT: 50051
     volumes:
       - hea_data_3:/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import grpc; grpc.channel_ready_future(grpc.insecure_channel('localhost:50051')).result(timeout=5)"]
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',50051),3); s.close()"]
       interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 20s
     depends_on:
       minio-init:
         condition: service_completed_successfully
       kafka-init:
         condition: service_completed_successfully
+      etcd:
+        condition: service_healthy
 
   hea-node-4:
     build:
@@ -242,27 +218,24 @@ services:
     ports:
       - "50054:50051"
     environment:
-      KAFKA_BOOTSTRAP: kafka:9092
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: hybridstream
-      MINIO_SECRET_KEY: hybridstream123
-      MINIO_BUCKET: hybridstream-snapshots
-      ETCD_ENDPOINTS: http://etcd:2379
-      AODE_ENDPOINT: aode:50055
       HEA_NODE_ID: hea-node-4
-      HEA_PORT: 50051
     volumes:
       - hea_data_4:/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import grpc; grpc.channel_ready_future(grpc.insecure_channel('localhost:50051')).result(timeout=5)"]
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',50051),3); s.close()"]
       interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 20s
     depends_on:
       minio-init:
         condition: service_completed_successfully
       kafka-init:
         condition: service_completed_successfully
+      etcd:
+        condition: service_healthy
+
+  # ── AODE (all defaults baked into config.py) ────────────────────────────────
 
   aode:
     build:
@@ -270,17 +243,12 @@ services:
       dockerfile: aode/Dockerfile
     ports:
       - "50055:50055"
-    environment:
-      KAFKA_BOOTSTRAP: kafka:9092
-      ETCD_ENDPOINTS: http://etcd:2379
-      FLINK_CONNECTOR_ENDPOINT: flink-connector:50056
-      HEA_ENDPOINTS: hea-node-1:50051,hea-node-2:50051,hea-node-3:50051,hea-node-4:50051
-      AODE_PORT: 50055
     healthcheck:
-      test: ["CMD", "python", "-c", "import grpc; grpc.channel_ready_future(grpc.insecure_channel('localhost:50055')).result(timeout=5)"]
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',50055),3); s.close()"]
       interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 20s
     depends_on:
       hea-node-1:
         condition: service_healthy
@@ -291,22 +259,20 @@ services:
       hea-node-4:
         condition: service_healthy
 
+  # ── Flink Connector (all defaults baked into config) ────────────────────────
+
   flink-connector:
     build:
       context: ..
       dockerfile: flink-connector/Dockerfile
     ports:
       - "50056:50053"
-    environment:
-      KAFKA_BOOTSTRAP: kafka:9092
-      FLINK_JOBMANAGER_URL: http://flink-jobmanager:8081
-      SCHEMA_DIR: /app/schemas
-      FLINK_CONNECTOR_PORT: 50053
     healthcheck:
-      test: ["CMD", "java", "-cp", "/app/app.jar", "-Djava.awt.headless=true", "ai.solarity.hybridstream.HealthCheck"]
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/50053"]
       interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 30s
     depends_on:
       aode:
         condition: service_healthy

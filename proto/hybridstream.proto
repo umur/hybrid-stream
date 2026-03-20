@@ -86,6 +86,50 @@ message TerminateAck {
 }
 
 // ─────────────────────────────────────────────────
+// AODEManagement — external management API
+// ─────────────────────────────────────────────────
+
+service AODEManagement {
+  rpc GetStatus              (AODEStatusRequest)     returns (AODEStatusResponse);
+  rpc TriggerRecalibration   (RecalibrationRequest)  returns (RecalibrationResponse);
+  rpc UpdateWeights          (WeightUpdateRequest)   returns (WeightUpdateResponse);
+  rpc GetPlacementState      (PlacementStateRequest) returns (PlacementStateResponse);
+}
+
+message AODEStatusRequest {}
+message AODEStatusResponse {
+  string instance_id           = 1;
+  bool   is_leader             = 2;
+  int32  operators_managed     = 3;
+  int32  active_migrations     = 4;
+  float  last_recalibration_ago_s = 5;
+  float  uptime_s              = 6;
+}
+
+message RecalibrationRequest {
+  string reason = 1;
+}
+message RecalibrationResponse {
+  bool   success            = 1;
+  int32  migrations_started = 2;
+  float  duration_ms        = 3;
+  string error_msg          = 4;
+}
+
+message WeightUpdateRequest {
+  string preset_name = 1;
+}
+message WeightUpdateResponse {
+  bool   success   = 1;
+  string error_msg = 2;
+}
+
+message PlacementStateRequest {}
+message PlacementStateResponse {
+  map<string, string> operator_to_tier = 1;
+}
+
+// ─────────────────────────────────────────────────
 // Internal AODE messages (etcd persisted as JSON, not RPC)
 // Defined here for documentation purposes only.
 // ─────────────────────────────────────────────────

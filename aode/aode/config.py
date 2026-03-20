@@ -8,10 +8,10 @@ class AODEConfig(BaseSettings):
     cluster_id:             str   = Field("default",             validation_alias=AliasChoices("AODE_CLUSTER_ID", "cluster_id"))
 
     # gRPC
-    grpc_port:              int   = Field(50052,                 validation_alias=AliasChoices("AODE_GRPC_PORT", "grpc_port"))
+    grpc_port:              int   = Field(50055,                 validation_alias=AliasChoices("AODE_GRPC_PORT", "grpc_port"))
 
-    # etcd
-    etcd_endpoints:         list[str] = Field(["localhost:2379"], validation_alias=AliasChoices("AODE_ETCD_ENDPOINTS", "etcd_endpoints"))
+    # etcd — Docker service name default
+    etcd_endpoints:         list[str] = Field(["http://etcd:2379"], validation_alias=AliasChoices("AODE_ETCD_ENDPOINTS", "etcd_endpoints"))
     etcd_key_prefix:        str   = Field("/aode/",              validation_alias=AliasChoices("AODE_ETCD_PREFIX", "etcd_key_prefix"))
 
     # Leader election
@@ -34,22 +34,22 @@ class AODEConfig(BaseSettings):
     # Weight preset
     default_weight_preset:  str   = Field("balanced",            validation_alias=AliasChoices("AODE_DEFAULT_WEIGHTS", "default_weight_preset"))
 
-    # HEA discovery
+    # HEA discovery — Docker service names as defaults
     hea_discovery_method:   str   = Field("static",              validation_alias=AliasChoices("AODE_HEA_DISCOVERY", "hea_discovery_method"))
     hea_endpoints:          list[str] = Field(
-        ["edge-node-1:50051", "edge-node-2:50051", "edge-node-3:50051", "edge-node-4:50051"],
+        ["hea-node-1:50051", "hea-node-2:50051", "hea-node-3:50051", "hea-node-4:50051"],
         validation_alias=AliasChoices("AODE_HEA_ENDPOINTS", "hea_endpoints"),
     )
 
-    # Flink connector
-    flink_connector_endpoint: str = Field("localhost:50053",     validation_alias=AliasChoices("AODE_FLINK_CONNECTOR", "flink_connector_endpoint"))
+    # Flink connector — Docker service name as default
+    flink_connector_endpoint: str = Field("flink-connector:50053", validation_alias=AliasChoices("AODE_FLINK_CONNECTOR", "flink_connector_endpoint"))
 
     # Migration
     migration_timeout_s:    int   = Field(300,                   validation_alias=AliasChoices("AODE_MIGRATION_TIMEOUT", "migration_timeout_s"))
     drain_timeout_s:        int   = Field(60,                    validation_alias=AliasChoices("AODE_DRAIN_TIMEOUT", "drain_timeout_s"))
 
-    # MinIO / Object store
-    minio_endpoint:         str   = Field("http://localhost:9000", validation_alias=AliasChoices("AODE_MINIO_ENDPOINT", "minio_endpoint"))
+    # MinIO — Docker service name as default
+    minio_endpoint:         str   = Field("http://minio:9000",   validation_alias=AliasChoices("AODE_MINIO_ENDPOINT", "minio_endpoint"))
     minio_access_key:       str   = Field("hybridstream",         validation_alias=AliasChoices("AODE_MINIO_ACCESS_KEY", "minio_access_key"))
     minio_secret_key:       str   = Field("hybridstream123",      validation_alias=AliasChoices("AODE_MINIO_SECRET_KEY", "minio_secret_key"))
     minio_bucket:           str   = Field("hybridstream-snapshots", validation_alias=AliasChoices("AODE_MINIO_BUCKET", "minio_bucket"))

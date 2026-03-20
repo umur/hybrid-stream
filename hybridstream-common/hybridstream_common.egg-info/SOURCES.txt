@@ -6,10 +6,15 @@ hybridstream/common/object_store.py
 hybridstream/common/schema_registry.py
 hybridstream/common/snapshot.py
 hybridstream/common/proto/__init__.py
+hybridstream/proto/__init__.py
+hybridstream/proto/hybridstream_pb2.py
+hybridstream/proto/hybridstream_pb2_grpc.py
 hybridstream_common.egg-info/PKG-INFO
 hybridstream_common.egg-info/SOURCES.txt
 hybridstream_common.egg-info/dependency_links.txt
 hybridstream_common.egg-info/requires.txt
 hybridstream_common.egg-info/top_level.txt
 tests/test_dag_model.py
+tests/test_object_store.py
+tests/test_schema_registry.py
 tests/test_snapshot.py

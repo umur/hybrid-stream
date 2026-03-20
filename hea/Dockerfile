@@ -4,8 +4,13 @@ WORKDIR /app
 
 # System deps for RocksDB
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    librocksdb-dev build-essential && \
+    librocksdb-dev build-essential liblz4-dev && \
     rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir lz4
+
+# Use pure Python protobuf implementation for compatibility with generated stubs
+ENV PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
 # Install dependencies
 COPY hybridstream-common/ /app/hybridstream-common/
@@ -21,4 +26,5 @@ RUN mkdir -p /data/rocksdb /data/checkpoints
 
 EXPOSE 50051
 
+WORKDIR /app/hea
 ENTRYPOINT ["python", "-m", "hea.main"]
