@@ -12,3 +12,6 @@ flink-connector/target/
 # Generated stubs (regenerated during Docker build)
 stubs-final/
 proto/generated/
+.venv/
+.pytest_cache/
+paper.md
