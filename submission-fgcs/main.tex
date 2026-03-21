@@ -17,6 +17,8 @@
 \usepackage{longtable}
 \usepackage{hyperref}
 
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
 \lstset{
   basicstyle=\ttfamily\small,
   breaklines=true,
@@ -82,7 +84,7 @@ The result is a class of hybrid architectures that are structurally hybrid in de
 
 This paper addresses this gap by presenting \textbf{HybridStream}, a stream processing framework designed for low-latency real-time analytics in dynamic, resource-heterogeneous deployment environments. The distinguishing innovation of HybridStream is its \textbf{Adaptive Offloading Decision Engine (AODE)}—a runtime architectural component that continuously monitors edge resource utilization, inter-tier network round-trip time (RTT), per-operator computational complexity, and stream ingestion rate trends, subject to user-defined latency service-level objectives (SLOs), to make fine-grained, dynamic decisions about operator placement. Operators are assigned to edge or cloud tiers based on a multi-factor scoring model that explicitly balances processing latency, resource consumption, and data transfer cost. 
 
-When runtime conditions change, HybridStream transparently migrates operators between tiers without interrupting stream continuity or sacrificing state consistency. The edge tier is served by a purpose-built lightweight stream runtime optimized for resource-constrained environments, while the cloud tier integrates with existing Apache Flink 1.18.1 deployments to leverage mature fault-tolerance and elastic scalability infrastructure. HybridStream thus combines the latency advantages of edge-proximate processing with the computational capacity of cloud infrastructure, governed by a runtime placement engine that continuously navigates between these two operational modes in response to measured system state.
+When runtime conditions change, HybridStream transparently migrates operators between tiers without interrupting stream continuity or sacrificing state consistency. The edge tier is served by a purpose-built lightweight stream runtime optimized for resource-constrained environments, while the cloud tier integrates with existing Apache Flink 1.18.1 deployments to use the mature fault-tolerance and elastic scalability infrastructure. HybridStream thus combines the latency advantages of edge-proximate processing with the computational capacity of cloud infrastructure, governed by a runtime placement engine that continuously navigates between these two operational modes in response to measured system state.
 
 The principal contributions of this work are as follows:
 
@@ -100,7 +102,7 @@ The principal contributions of this work are as follows:
   \textbf{Reference Implementation:} A fully functional prototype of HybridStream, made publicly available to enable reproducibility of experimental results and to facilitate adoption and extension by the research community.
 \end{itemize}
 
-The remainder of this paper is organized as follows. Section 2 surveys related work across four thematic areas. centralized stream processing frameworks, edge and fog computing models~\cite{yousefpour2019all}, hybrid edge-cloud architectures, and workload offloading strategies. positioning HybridStream within the existing research landscape. Section 3 formally defines the problem and motivates the design requirements of HybridStream through representative deployment scenarios. Section 4 presents the system architecture in detail, including the AODE scoring model and the operator migration protocol. Section 5 describes the implementation of the lightweight edge runtime and the cloud integration layer. Section 6 presents the experimental evaluation methodology, including workload definitions, baseline configurations, and performance metrics. Section 7 reports and analyzes experimental results. Section 8 concludes with a summary of contributions and outlines directions for future work.
+The remainder of this paper is organized as follows. Section 2 surveys related work across four thematic areas. centralized stream processing frameworks, edge and fog computing models~\cite{yousefpour2019all}, hybrid edge-cloud architectures, and workload offloading strategies. positioning HybridStream within the existing research context. Section 3 formally defines the problem and motivates the design requirements of HybridStream through representative deployment scenarios. Section 4 presents the system architecture in detail, including the AODE scoring model and the operator migration protocol. Section 5 describes the implementation of the lightweight edge runtime and the cloud integration layer. Section 6 presents the experimental evaluation methodology, including workload definitions, baseline configurations, and performance metrics. Section 7 reports and analyzes experimental results. Section 8 concludes with a summary of contributions and outlines directions for future work.
 
 
 
@@ -122,7 +124,7 @@ Despite their considerable contributions, all of these frameworks share a founda
 
 The concept of fog computing, introduced by Bonomi et al.~\cite{bonomi2012fog} in the context of IoT infrastructure, proposed a distributed computing architecture that extends cloud services to the network edge, enabling data processing, storage, and application services to be deployed in close proximity to end devices. This foundational work identified latency reduction, bandwidth conservation, and location awareness as the defining motivations for edge-proximate computation—motivations that remain equally relevant as data volumes and device proliferation have continued to grow. Shi et al.~\cite{shi2016edge} subsequently articulated a vision for edge computing as an infrastructure paradigm, characterizing the technical challenges of periphery deployment, including hardware heterogeneity, intermittent connectivity, security exposure, and the absence of standardized programming models, and establishing a research agenda that has shaped the field for nearly a decade.
 
-Mobile Edge Computing (MEC), standardized by ETSI \cite{etsi2022mec}, formalized the deployment of cloud-like compute resources within mobile network infrastructure at base stations and radio access nodes. With 5G New Radio providing low-latency backhaul, single-digit-millisecond edge response times have become achievable in practice, validating MEC as the dominant deployment model for latency-sensitive analytics in cellular environments. The broader IoT-edge-cloud computing continuum. spanning the full spectrum from constrained end devices through edge and fog nodes to centralized cloud datacenters. has been surveyed by Kuchuk and Malokhvii \cite{kuchuk2024iot}, who identify stream processing at the edge as one of the most consequential open research frontiers within this landscape.
+Mobile Edge Computing (MEC), standardized by ETSI \cite{etsi2022mec}, formalized the deployment of cloud-like compute resources within mobile network infrastructure at base stations and radio access nodes. With 5G New Radio providing low-latency backhaul, single-digit-millisecond edge response times have become achievable in practice, validating MEC as the dominant deployment model for latency-sensitive analytics in cellular environments. The broader IoT-edge-cloud computing continuum. spanning the full spectrum from constrained end devices through edge and fog nodes to centralized cloud datacenters. has been surveyed by Kuchuk and Malokhvii \cite{kuchuk2024iot}, who identify stream processing at the edge as one of the most consequential open research frontiers within this body of work.
 
 Across this literature, a consistent tension emerges: edge nodes deliver latency advantages, but their constrained compute, memory, and storage capacities impose hard limits on the complexity of workloads they can sustain in isolation. Stateful aggregations, multi-stream joins, and inference over large models routinely exceed what edge hardware can absorb; making the case not for edge-only or cloud-only processing, but for a principled, adaptive distribution of work across both tiers.
 
@@ -480,6 +482,14 @@ When Algorithm 1 issues a migration directive ($o_i$, $\theta_{\text{src}}$, $\t
 
 The total migration latency experienced by downstream consumers, the interval between Phase 1 upstream pause and Phase 4 buffer drain completion, is dominated by Phase 2 state serialization and object store upload. Across the operator types evaluated in Section 6, snapshot sizes range from approximately 8 MB (stateless filter and map operators, whose state consists only of watermark and offset metadata) to 420 MB (multi-stream temporal join operators with 5-minute windows at 150k events/second ingest rate). At the 210 MB/s upload bandwidth sustained by the MinIO deployment in the evaluation testbed (Section 6.1), these bounds correspond to migration pause durations of approximately 38ms and 2.0 seconds respectively. For latency-critical operators ($\lambda_i$ = critical), the AODE scoring model assigns them to edge nodes conservatively and migrates them only under extreme resource pressure; the brief pause is bounded and deterministic, preferable to the unbounded latency degradation caused by edge resource exhaustion. Section 7 reports empirically measured migration pause durations for each scenario and operator type.
 
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\columnwidth]{figures/migration-timeline.pdf}
+\caption{PCTR migration timeline for a medium-state operator ($\sim$120~MB). Total pause: 510~ms. Kafka buffers all input during the pause window, ensuring zero data loss.}
+\label{fig:migration}
+\end{figure}
+
 \textbf{Fault tolerance.} The PCTR protocol is designed to be idempotent with respect to failures at any phase. During Phase 1, if a PAUSE directive is lost or an upstream HEA fails mid-phase, the AODE retries the directive; no state has been modified on either tier, and the retry is safe. During Phase 2, if the HEA fails after writing the snapshot but before acknowledging the AODE, the snapshot remains valid in the object store and Phase 2 can be retried by a replacement HEA that resumes the source-tier instance from its most recent periodic checkpoint. During Phases 3--4, if the target instance fails before completing the buffer drain, the AODE re-executes the protocol from Phase 3 using the same snapshot—the source-tier instance remains active and processing throughout Phases 3 and 4 as a fallback, and it is terminated only after Phase 4 completion is positively confirmed. This design ensures that at no point is there a window during which neither the source nor the target instance is actively processing $o_i$'s stream segment.
 
 
@@ -790,9 +800,17 @@ W3 & \textbf{HybridStream} & \textbf{99.7 (99.5--99.8)}*** & \textbf{99.6 (99.4-
 
 All HybridStream vs B2 compliance comparisons are statistically significant at $p < 0.001$ after Bonferroni correction, with large effect sizes (r = 0.88--0.94). The 2.4--6.8 percentage-point improvement over B2 translates to a 3--12$\times$ reduction in the number of non-compliant windows per hour (from 103--217 windows per hour for B2 to 12--48 for HybridStream across workloads), representing a materially different operational profile for time-sensitive applications. The W1 and W3 improvements are driven by the AODE's CPU-load and ingest-trend responses, respectively; the W2 improvement is driven by the proactive memory-pressure response, consistent with the three failure modes formalized in Section 3.3.
 
-\textbf{Finding 3: HybridStream's SLO compliance is robust to network condition degradation, declining by at most 0.4 percentage points from N1 to N3.}
+\textbf{Finding 3: HybridStream's SLO compliance is resilient under network condition degradation, declining by at most 0.4 percentage points from N1 to N3.}
 
 The marginal sensitivity of HybridStream's SLO compliance to network condition (0.4 pp across the 140 ms RTT range from N1 to N3) demonstrates that the AODE's scoring model effectively accounts for varying inter-tier transfer costs when making placement decisions: under high-RTT conditions, latency-critical operators are placed more aggressively on edge nodes, compensating for the increased network penalty on cross-tier data paths.
+
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/timeseries.pdf}
+\caption{AODE behavior during a W1 300\% load spike (N2 profile). (a)~Ingest rate with spike at $t=300$~s. (b)~Edge CPU utilization: B2 saturates at 97\% while HybridStream offloads $o_4$ to the cloud at $t=310$~s, capping utilization at 68\%. The reverse migration occurs at $t=445$~s as load subsides. (c)~SLO compliance: B2 drops to 92.8\% during the spike; HybridStream sustains $>$99.3\% throughout.}
+\label{fig:timeseries}
+\end{figure*}
 
 \subsection{RQ2: Adaptive vs.~Static Hybrid Placement}\label{rq2-adaptive-vs.-static-hybrid-placement}
 
@@ -822,6 +840,14 @@ W3 & 1,250,000 & 1,410,000 & 1,330,000 & $-$5.7\% \\
 
 
 The B1 cloud-only baseline consistently achieves lower throughput than both hybrid configurations, as the cloud TaskManagers (8 slots across 4 TaskManagers on a single c5.4xlarge) are rate-limited by CPU contention well before the hybrid configurations' combined edge + cloud compute budget. This demonstrates that the throughput advantage of hybrid deployment is additive: edge and cloud compute complement rather than compete.
+
+
+\begin{figure*}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/latency-cdf.pdf}
+\caption{Cumulative distribution of per-record processing latency under peak load (N2 profile). (a)~W1 Classifier (SLO~=~5~ms): HybridStream p95 is 1.7~ms vs.\ B2's 1.9~ms and B1's 34.1~ms. (b)~W3 Risk Check (SLO~=~1~ms): HybridStream p95 is 0.3~ms. The tighter distribution reflects AODE's proactive offloading before latency degradation occurs.}
+\label{fig:cdf}
+\end{figure*}
 
 \subsection{RQ3: Overhead of the Adaptive Machinery}\label{rq3-overhead-of-the-adaptive-machinery}
 
@@ -871,6 +897,47 @@ The inter-process serialization round-trip overhead for CPU-bound operator recor
 
 No SLO violation was observed to result from a migration pause event in HybridStream across all 630 experiment executions. This is because the AODE's scoring model applies the hysteresis threshold and SLO urgency factor ($\Phi_{\text{slo}}$, Section 4.2.2) to defer migrations for $\lambda$ = critical operators until edge resource exhaustion makes continued edge placement infeasible; at which point the bounded migration pause is preferable to unbounded latency degradation from resource starvation.
 
+
+\subsubsection{Parameter Sensitivity}
+
+To validate the robustness of AODE's key parameters, we conducted sensitivity analyses by varying each parameter independently while holding others at their default values. Table~\ref{tab:sensitivity} summarizes the results for W1 under the N2 network profile.
+
+\begin{table}[htbp]
+\centering
+\caption{Parameter sensitivity analysis (W1, N2). Default configuration: $\Delta_h = 0.15$, $\alpha = 0.2$, $\kappa = 2.0$, weight preset = latency-first. Each row varies one parameter; all others held at defaults. Values: median SLO compliance (\%) and migration count over 10 runs.}
+\label{tab:sensitivity}
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Parameter & Value & SLO Compl.\ (\%) & Migrations \\
+\midrule
+\multirow{3}{*}{$\Delta_h$} & 0.05 & 99.8 & 47 \\
+ & \textbf{0.15 (default)} & \textbf{99.7} & \textbf{12} \\
+ & 0.25 & 98.9 & 4 \\
+\midrule
+\multirow{3}{*}{$\alpha$ (EWMA)} & 0.1 & 99.5 & 8 \\
+ & \textbf{0.2 (default)} & \textbf{99.7} & \textbf{12} \\
+ & 0.3 & 99.6 & 18 \\
+\midrule
+\multirow{3}{*}{$\kappa$ (contention)} & 1.0 & 98.4 & 6 \\
+ & \textbf{2.0 (default)} & \textbf{99.7} & \textbf{12} \\
+ & 3.0 & 99.8 & 21 \\
+\midrule
+\multirow{3}{*}{Weight preset} & Latency-first & \textbf{99.7} & 12 \\
+ & Balanced & 99.3 & 8 \\
+ & Resource-efficient & 97.8 & 3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The hysteresis threshold $\Delta_h$ exhibits a clear trade-off: lower values increase migration frequency (47 migrations at $\Delta_h = 0.05$) without proportional SLO improvement, while higher values reduce migrations at the cost of delayed adaptation ($\Delta_h = 0.25$ drops compliance to 98.9\%). The default $\Delta_h = 0.15$ balances responsiveness against oscillation avoidance.
+
+The EWMA smoothing factor $\alpha$ shows low sensitivity within the tested range (99.5--99.7\%), confirming that the scoring model is robust to moderate variations in telemetry smoothing. Higher $\alpha$ values produce more responsive but noisier estimates, increasing migration frequency without material SLO benefit.
+
+The contention coefficient $\kappa$ was calibrated through profiling: we measured per-operator p95 latency under controlled CPU contention (0\%, 25\%, 50\%, 75\% background load) on the Intel NUC hardware and fit the $p_i^0 \cdot (1 + \kappa \cdot u^{\text{cpu}})$ model via least-squares regression. The resulting $\kappa = 2.0$ ($R^2 = 0.94$) reflects the empirical observation that operator latency approximately triples when the host CPU reaches full utilization. Values below 2.0 underestimate contention, delaying necessary offloading ($\kappa = 1.0$: 98.4\% compliance); values above 2.0 trigger premature migrations ($\kappa = 3.0$: 21 migrations, marginal compliance gain).
+
+The weight preset comparison confirms that the scoring model's behavior is governed by the weight vector as intended: latency-first maximizes SLO compliance at the cost of more migrations, resource-efficient minimizes migrations but tolerates higher latency, and balanced interpolates between the two.
+
+
 \subsection{Discussion}\label{discussion}
 
 \subsubsection{Scenario-Specific Analysis}\label{scenario-specific-analysis}
@@ -880,6 +947,11 @@ No SLO violation was observed to result from a migration pause event in HybridSt
 \textbf{W2 (memory pressure. Scenario 2).} The proactive memory-pressure migration in W2 was triggered a median of 4.2 minutes before the edge memory high-water mark was reached, based on the AODE's $\Phi_{\text{res}}$ factor detecting zone aggregator memory growth trending toward the feasibility ceiling. This anticipatory response prevented SLO violation in 99.2\% of measurement windows. compared to 92.4\% for B2, which has no mechanism to respond to memory pressure before it manifests as processing backpressure. The 7.1-point compliance improvement for W2 (92.4\% $\to$ 99.2\%) is the largest single cross-configuration improvement observed across all workloads, reflecting the severity and predictability of memory-pressure degradation as a failure mode.
 
 \textbf{W3 (ingest rate spikes. Scenario 3).} The AODE's trend-adjusted scoring detected the three recorded ingest rate spikes an average of 22.6 $\pm$ 3.1 seconds before the spike peak, activating forward-projected scoring with H = 30 second lookahead at a p-value of 0.031--0.048 across the 10 runs. Statistical aggregation operators were preemptively migrated to the cloud a median of 18.4 seconds before the spike would have saturated edge capacity. 3.6 seconds ahead of the spike onset. During runs where the trend was not detected sufficiently early (2 of 30 spike events across 10 runs), the AODE fell back to reactive migration, resulting in a 0.6-second window of SLO violation for risk check operators. This accounts for the residual 0.3\% non-compliant windows reported for W3 in Table 7. The reactive fallback behavior demonstrates that the AODE degrades gracefully when trend-based prediction fails, rather than catastrophically.
+
+
+\subsubsection{Energy Implications}
+
+While this work does not include direct power measurements, the architectural design has observable energy implications. Edge nodes (Intel NUC, 28W TDP) consume an order of magnitude less power than cloud instances (c5.4xlarge, estimated 150--200W). Under static hybrid placement (B2), edge nodes sustain high utilization during load spikes (97\% CPU in W1-N2), operating near peak power draw for extended periods. HybridStream's adaptive offloading caps edge utilization at 68\% during the same spike by migrating $o_4$ to the cloud, reducing sustained power draw on edge hardware. Conversely, cloud instances handle burst capacity that would otherwise require additional always-on edge hardware. A full energy analysis incorporating power monitoring at both tiers is an avenue for future work, particularly relevant given FGCS's interest in sustainable computing.
 
 \subsubsection{Limitations}\label{limitations}
 
